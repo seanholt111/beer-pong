@@ -278,21 +278,20 @@
   #feedback.sink { color: var(--accent); text-shadow: 0 0 12px rgba(0,229,168,0.5); }
 
   #canvasWrap {
-    flex: 1;
-    min-height: 0;
+    flex: 1 1 auto;
+    min-height: 220px;
     position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     touch-action: none;
+    width: 100%;
   }
 
-  canvas {
+  canvas#game {
+    position: absolute;
+    inset: 0;
     display: block;
-    width: 100%;
-    height: 100%;
+    width: 100% !important;
+    height: 100% !important;
     touch-action: none;
-    max-height: 100%;
   }
 
   #controls {
@@ -477,23 +476,57 @@
     el.classList.add('active');
   }
 
-  function resize() {
+  function measureCanvasSize() {
     const wrap = document.getElementById('canvasWrap');
-    const rect = wrap.getBoundingClientRect();
-    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    let w = Math.floor(wrap.clientWidth || wrap.getBoundingClientRect().width || 0);
+    let h = Math.floor(wrap.clientHeight || wrap.getBoundingClientRect().height || 0);
+    // iOS often reports 0 height on the first frame after showing the game screen
+    if (w < 40 || h < 120) {
+      const hud = document.getElementById('hud');
+      const controls = document.getElementById('controls');
+      const hint = document.getElementById('aimHint');
+      const gs = gameScreen.getBoundingClientRect();
+      const used = (hud ? hud.offsetHeight : 0) + (controls ? controls.offsetHeight : 0) + (hint ? hint.offsetHeight : 0);
+      w = Math.max(w, Math.floor(gs.width || window.innerWidth || 360));
+      h = Math.max(h, Math.floor((gs.height || window.innerHeight || 640) - used - 8));
+    }
+    w = Math.max(200, w);
+    h = Math.max(220, h);
+    return { w, h };
+  }
+
+  function resize() {
+    if (!gameScreen.classList.contains('active')) return;
+    const { w, h } = measureCanvasSize();
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
     state.dpr = dpr;
-    state.W = Math.max(1, Math.floor(rect.width));
-    state.H = Math.max(1, Math.floor(rect.height));
-    canvas.width = Math.floor(state.W * dpr);
-    canvas.height = Math.floor(state.H * dpr);
-    canvas.style.width = state.W + 'px';
-    canvas.style.height = state.H + 'px';
+    state.W = w;
+    state.H = h;
+    canvas.width = Math.floor(w * dpr);
+    canvas.height = Math.floor(h * dpr);
+    // Keep CSS size from absolute fill; only set backing store
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     layoutTable();
-    // Reposition cups if game in progress
     if (state.cups[0].length) {
       rebuildCupPositions();
     }
+  }
+
+  function resizeWhenReady(then) {
+    showScreen(gameScreen);
+    let tries = 0;
+    function attempt() {
+      resize();
+      tries++;
+      if ((state.W < 200 || state.H < 200) && tries < 12) {
+        requestAnimationFrame(attempt);
+        return;
+      }
+      if (then) then();
+    }
+    requestAnimationFrame(() => requestAnimationFrame(attempt));
   }
 
   function layoutTable() {
@@ -652,14 +685,13 @@
     state.ball = null;
     state.particles = [];
     state.firstTurn = true;
-    showScreen(gameScreen);
-    resize();
-    initCups();
-    updateHUD();
-    // First player: no pass needed, just play
     passOverlay.classList.remove('show');
     setFeedback('Drag back & release!', 'sink');
     aimHint.textContent = 'Drag back to aim · release to throw';
+    resizeWhenReady(() => {
+      initCups();
+      updateHUD();
+    });
   }
 
   function updateHUD() {
@@ -1155,10 +1187,7 @@
 
   // ——— Buttons ———
   document.getElementById('startBtn').addEventListener('click', startGame);
-  document.getElementById('againBtn').addEventListener('click', () => {
-    showScreen(gameScreen);
-    startGame();
-  });
+  document.getElementById('againBtn').addEventListener('click', startGame);
   document.getElementById('homeBtn').addEventListener('click', () => showScreen(startScreen));
   document.getElementById('menuBtn').addEventListener('click', () => {
     if (state.phase === 'flying') return;
@@ -1173,12 +1202,18 @@
   });
 
   window.addEventListener('resize', resize);
-  window.addEventListener('orientationchange', () => setTimeout(resize, 200));
+  window.addEventListener('orientationchange', () => setTimeout(resize, 250));
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', resize);
+  }
+  if (window.ResizeObserver) {
+    new ResizeObserver(() => {
+      if (gameScreen.classList.contains('active')) resize();
+    }).observe(document.getElementById('canvasWrap'));
+  }
 
   // Kick off render loop (start screen still fine)
   requestAnimationFrame(tick);
-  // Initial size when game shows — also try once
-  resize();
 })();
 </script>
 </body>
