@@ -461,8 +461,10 @@
   // ——— World units ———
   const TABLE_LEN = 8.0;
   const TABLE_W = 2.0;
-  const CUP_R = 0.105;           // drawn rim radius
-  const CUP_HIT_R = CUP_R * 1.20; // forgiving logical rim (~20% larger)
+  const CUP_R = 0.105;           // base rim radius (near cups)
+  const CUP_R_FAR = 0.175;       // target cups — much larger
+  const CUP_HIT_R = CUP_R * 1.20;
+  const CUP_HIT_R_FAR = CUP_R_FAR * 1.28; // forgiving target rim
   const CUP_H = 0.28;
   const BALL_R = 0.075;
   const GRAVITY = 18.5;
@@ -477,9 +479,9 @@
   // Soft magnet assist: late-flight nudge toward nearest cup if close + clean swipe
   const MAGNET = {
     startT: 0.55,       // fraction of flight life when assist may kick in
-    maxDist: 0.28,      // world units from cup center to start pulling
-    strength: 2.8,      // lateral acceleration toward cup
-    cleanMin: 0.55      // swipe cleanliness threshold (0..1)
+    maxDist: 0.42,      // larger with big target cups
+    strength: 3.2,      // lateral acceleration toward cup
+    cleanMin: 0.50      // swipe cleanliness threshold (0..1)
   };
 
   const state = {
@@ -576,10 +578,11 @@
     return { sx: screenX, sy: screenY, scale, depth };
   }
 
-  // Far cups drawn ~18% larger for readability / hit feel
-  function cupDrawScale(z) {
-    const t = Math.max(0, Math.min(1, (z - 3.5) / (TABLE_LEN - 3.5)));
-    return 1 + t * 0.18;
+  // Far/target cups drawn much larger for fun + readability
+  function cupDrawScale(z, isFar) {
+    if (!isFar) return 1;
+    const t = Math.max(0, Math.min(1, (z - 3.2) / (TABLE_LEN - 3.2)));
+    return 1.55 + t * 0.45; // ~1.55–2.0x visual size
   }
 
   // ——— Cup racks ———
@@ -587,10 +590,11 @@
   // Near rack: base-4 at near end, apex toward mid
   function rackSlots(end, nCups) {
     const rows = packRows(nCups);
-    const gapX = CUP_R * 2.35;
-    const gapZ = CUP_R * 2.15;
+    const rBase = end === 'far' ? CUP_R_FAR : CUP_R;
+    const gapX = rBase * 2.25;
+    const gapZ = rBase * 2.05;
     const slots = [];
-    const farZ = TABLE_LEN - 0.35;
+    const farZ = TABLE_LEN - 0.45;
     const nearZ = 0.55;
 
     if (end === 'far') {
@@ -1051,10 +1055,9 @@
       if (d < bestD) { bestD = d; best = c; }
     }
     if (!best) return null;
-    // Forgiving logical rim ~20% larger than drawn
-    if (bestD <= CUP_HIT_R) return { cup: best, dist: bestD };
-    // Rim scrape: close but outside hit radius
-    if (bestD <= CUP_HIT_R * 1.22) return { cup: best, dist: bestD, rim: true };
+    // Target cups use the big far hit radius
+    if (bestD <= CUP_HIT_R_FAR) return { cup: best, dist: bestD };
+    if (bestD <= CUP_HIT_R_FAR * 1.18) return { cup: best, dist: bestD, rim: true };
     return null;
   }
 
@@ -1075,7 +1078,7 @@
     }
 
     // Late rim check at table height
-    if (nearCup && nearD <= CUP_HIT_R && b.y <= CUP_H + BALL_R * 1.5) {
+    if (nearCup && nearD <= CUP_HIT_R_FAR && b.y <= CUP_H + BALL_R * 1.5) {
       sinkCup(nearCup);
       b.result = 'sink';
       spawnSplash(nearCup.x, CUP_H, nearCup.z);
@@ -1095,10 +1098,10 @@
     const farZ = TABLE_LEN - 0.35;
     const rackZ = nearCup ? nearCup.z : farZ;
 
-    if (nearCup && nearD <= CUP_HIT_R * 1.35) {
+    if (nearCup && nearD <= CUP_HIT_R_FAR * 1.3) {
       msg = 'Rim!';
       kind = 'rim';
-    } else if (Math.abs(b.x) > TABLE_W * 0.55 || (nearCup && Math.abs(b.x - nearCup.x) > CUP_HIT_R * 1.8 && Math.abs(b.z - rackZ) < 0.55)) {
+    } else if (Math.abs(b.x) > TABLE_W * 0.55 || (nearCup && Math.abs(b.x - nearCup.x) > CUP_HIT_R_FAR * 1.8 && Math.abs(b.z - rackZ) < 0.55)) {
       msg = 'Wide';
       kind = 'miss';
     } else if (b.z < rackZ - 0.45) {
@@ -1234,7 +1237,7 @@
   }
 
   function drawCup(cup, isFar) {
-    const drawR = CUP_R * (isFar ? cupDrawScale(cup.z) : 1);
+    const drawR = (isFar ? CUP_R_FAR : CUP_R) * cupDrawScale(cup.z, isFar);
     const rimY = CUP_H;
     const pRim = project(cup.x, rimY, cup.z);
     const pBase = project(cup.x, 0, cup.z);
