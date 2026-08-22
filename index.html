@@ -12,7 +12,6 @@
 <style>
   :root {
     --bg: #0a0612;
-    --bg2: #140c22;
     --panel: rgba(28, 16, 48, 0.92);
     --neon: #ff2d95;
     --neon2: #7c5cff;
@@ -20,10 +19,6 @@
     --warn: #ffc857;
     --text: #f5f0ff;
     --muted: #a89bc4;
-    --table: #1a5c3a;
-    --table-edge: #0d3a24;
-    --cup: #e8eef5;
-    --cup-rim: #ff4d6d;
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
     --safe-left: env(safe-area-inset-left, 0px);
@@ -67,7 +62,6 @@
     position: relative;
   }
 
-  /* Screens */
   .screen {
     position: absolute;
     inset: 0;
@@ -96,7 +90,6 @@
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    text-shadow: none;
     line-height: 1.05;
   }
   .logo .sub {
@@ -169,16 +162,13 @@
     border: 1px solid rgba(255,255,255,0.15);
     margin-top: 10px;
   }
-  .btn-accent {
-    background: linear-gradient(135deg, #00c896, #00a87a);
-    box-shadow: 0 4px 16px rgba(0, 229, 168, 0.25);
-  }
   .btn-sm {
     min-height: 44px;
     font-size: 0.95rem;
     padding: 10px 14px;
     width: auto;
     flex: 1;
+    margin-top: 0;
   }
 
   .howto {
@@ -189,7 +179,6 @@
   }
   .howto li { margin-left: 1.1em; margin-bottom: 4px; }
 
-  /* Game HUD */
   #gameScreen {
     background: var(--bg);
     padding: 0;
@@ -302,7 +291,6 @@
     background: linear-gradient(0deg, #12081e 0%, transparent 100%);
   }
 
-  /* Pass phone overlay */
   #passOverlay {
     display: none;
     position: absolute;
@@ -333,7 +321,6 @@
   }
   #passOverlay .btn { max-width: 280px; }
 
-  /* End / start extras */
   #winnerName {
     font-size: clamp(2rem, 10vw, 2.8rem);
     font-weight: 900;
@@ -361,7 +348,6 @@
 <body>
 <div id="app">
 
-  <!-- START -->
   <div id="startScreen" class="screen active">
     <div class="logo">
       <h1>🍺 Beer Pong</h1>
@@ -377,15 +363,14 @@
     <div class="card howto">
       <strong style="color:var(--text)">How to play</strong>
       <ul style="margin-top:8px">
-        <li>Drag back like a slingshot, release to throw</li>
+        <li>Drag back on the lower half — pull = power, left/right = aim</li>
+        <li>Release to throw with a real arc into the cups</li>
         <li>Sink all 10 of your opponent's cups</li>
-        <li>Pass the phone each turn</li>
-        <li>Re-rack anytime with the button</li>
+        <li>Pass the phone each turn · Re-rack anytime</li>
       </ul>
     </div>
   </div>
 
-  <!-- GAME -->
   <div id="gameScreen" class="screen">
     <div id="hud">
       <div class="hud-row">
@@ -417,7 +402,6 @@
     </div>
   </div>
 
-  <!-- END -->
   <div id="endScreen" class="screen">
     <div class="logo" style="margin-top:12vh">
       <h1>Winner!</h1>
@@ -447,30 +431,38 @@
   const turnBanner = document.getElementById('turnBanner');
   const aimHint = document.getElementById('aimHint');
 
-  // ——— State ———
-  const state = {
-    names: ['Sean', 'Guest'],
-    cups: [[], []],          // each: {x,y,r, alive}
-    turn: 0,                 // shooter index (0 or 1) — aims at opponent's cups
-    phase: 'idle',           // idle | aiming | flying | settle | pass | over
-    ball: null,
-    aim: { active: false, sx: 0, sy: 0, cx: 0, cy: 0 },
-    feedbackTimer: 0,
-    dpr: 1,
-    W: 0, H: 0,              // CSS pixels of canvas
-    table: null,             // layout rect in canvas CSS px
-    particles: [],
-    lastThrowHit: false,
-    firstTurn: true
+  // ——— World units (feet-ish) ———
+  // Table: length along Z, width along X. Camera at shooter end looking toward +Z.
+  const TABLE_LEN = 8.0;     // z: 0 near (shooter) → TABLE_LEN far
+  const TABLE_W = 2.0;       // x: -TABLE_W/2 … +TABLE_W/2
+  const CUP_R = 0.105;       // cup rim radius
+  const CUP_H = 0.28;        // cup height
+  const BALL_R = 0.075;      // ball radius
+  const GRAVITY = 18.5;      // world units / s^2
+
+  // Perspective camera (eye above near end, looking down table)
+  const CAM = {
+    eyeY: 1.55,
+    eyeZ: -1.35,
+    lookZ: 4.2,
+    fov: 0.92
   };
 
-  // Physics constants (tuned for portrait phones)
-  const G = 980;             // px/s^2 downward in screen space for arc feel
-  const BOUNCE = 0.35;
-  const FRICTION = 0.82;
-  const BALL_R = 9;
+  const state = {
+    names: ['Sean', 'Guest'],
+    cups: [[], []],
+    turn: 0,
+    phase: 'idle', // idle | aiming | flying | settle | pass | over
+    ball: null,
+    aim: { active: false, sx: 0, sy: 0, cx: 0, cy: 0, power: 0, yaw: 0 },
+    feedbackTimer: 0,
+    dpr: 1,
+    W: 0, H: 0,
+    particles: [],
+    lastTs: 0
+  };
 
-  // ——— Layout helpers ———
+  // ——— Screens / resize (iOS-safe) ———
   function showScreen(el) {
     [startScreen, gameScreen, endScreen].forEach(s => s.classList.remove('active'));
     el.classList.add('active');
@@ -480,7 +472,6 @@
     const wrap = document.getElementById('canvasWrap');
     let w = Math.floor(wrap.clientWidth || wrap.getBoundingClientRect().width || 0);
     let h = Math.floor(wrap.clientHeight || wrap.getBoundingClientRect().height || 0);
-    // iOS often reports 0 height on the first frame after showing the game screen
     if (w < 40 || h < 120) {
       const hud = document.getElementById('hud');
       const controls = document.getElementById('controls');
@@ -490,9 +481,7 @@
       w = Math.max(w, Math.floor(gs.width || window.innerWidth || 360));
       h = Math.max(h, Math.floor((gs.height || window.innerHeight || 640) - used - 8));
     }
-    w = Math.max(200, w);
-    h = Math.max(220, h);
-    return { w, h };
+    return { w: Math.max(200, w), h: Math.max(220, h) };
   }
 
   function resize() {
@@ -504,14 +493,10 @@
     state.H = h;
     canvas.width = Math.floor(w * dpr);
     canvas.height = Math.floor(h * dpr);
-    // Keep CSS size from absolute fill; only set backing store
     canvas.style.width = '100%';
     canvas.style.height = '100%';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    layoutTable();
-    if (state.cups[0].length) {
-      rebuildCupPositions();
-    }
+    if (state.cups[0].length) syncCupLayout();
   }
 
   function resizeWhenReady(then) {
@@ -529,133 +514,76 @@
     requestAnimationFrame(() => requestAnimationFrame(attempt));
   }
 
-  function layoutTable() {
+  // ——— 3D → screen projection ———
+  // Returns {sx, sy, scale, depth} in CSS pixels. scale ≈ apparent size factor.
+  function project(x, y, z) {
     const W = state.W, H = state.H;
-    // Portrait table: long vertically, player shoots from BOTTOM toward TOP cups
-    // (on pass, we flip which end is "target" by swapping visual — always shoot toward top)
-    const padX = Math.max(12, W * 0.06);
-    const padY = Math.max(10, H * 0.04);
-    const tw = W - padX * 2;
-    const th = H - padY * 2;
-    state.table = { x: padX, y: padY, w: tw, h: th };
+    const dz = z - CAM.eyeZ;
+    const dy = y - CAM.eyeY;
+    // Avoid divide-by-zero behind camera
+    const depth = Math.max(0.35, dz);
+    const persp = 1 / (CAM.fov * depth);
+    // Horizon / vanishing toward look point
+    const screenX = W * 0.5 + x * persp * W * 0.72;
+    // Map world Y up → screen Y down; table surface drifts upward as z increases
+    const tableBase = H * 0.88;
+    const vanishLift = (z / TABLE_LEN) * H * 0.52;
+    const heightLift = dy * persp * H * 0.55;
+    const screenY = tableBase - vanishLift - heightLift;
+    const scale = persp * W * 0.72;
+    return { sx: screenX, sy: screenY, scale, depth };
   }
 
-  // Triangle rack: row counts 4,3,2,1 pointing toward mid-table (apex toward center)
-  // For target at TOP: base near top edge, apex lower (toward shooter)
-  // For own cups at BOTTOM: base near bottom, apex higher
-  function cupPositions(end /* 'top' | 'bottom' */) {
-    const t = state.table;
-    const cupR = Math.min(t.w, t.h) * 0.048;
-    const gap = cupR * 2.15;
-    const rows = [4, 3, 2, 1];
-    const positions = [];
-    const rackDepth = (rows.length - 1) * gap * 0.9;
-    const startY = end === 'top'
-      ? t.y + cupR * 1.6
-      : t.y + t.h - cupR * 1.6 - rackDepth;
+  // ——— Cup racks ———
+  // Opponent (far): rows 4-3-2-1 with row of 4 at FAR end, apex toward mid-table
+  // Own (near):     rows 4-3-2-1 with row of 4 at NEAR end, apex toward mid-table
+  function rackSlots(end /* 'far' | 'near' */, nCups) {
+    const rows = packRows(nCups);
+    const gapX = CUP_R * 2.35;
+    const gapZ = CUP_R * 2.15;
+    const slots = [];
+    const farZ = TABLE_LEN - 0.35;
+    const nearZ = 0.55;
+    const midBias = 0.15;
 
-    for (let r = 0; r < rows.length; r++) {
-      const n = rows[r];
-      const rowW = (n - 1) * gap;
-      const y = end === 'top'
-        ? startY + r * gap * 0.9
-        : startY + r * gap * 0.9;
-      for (let i = 0; i < n; i++) {
-        const x = t.x + t.w / 2 - rowW / 2 + i * gap;
-        positions.push({ x, y, r: cupR });
+    if (end === 'far') {
+      // row 0 (4 cups) at farZ; subsequent rows decrease z (toward shooter / mid)
+      for (let r = 0; r < rows.length; r++) {
+        const count = rows[r];
+        const z = farZ - r * gapZ;
+        const rowW = (count - 1) * gapX;
+        for (let i = 0; i < count; i++) {
+          const x = -rowW / 2 + i * gapX;
+          slots.push({ x, z: z - midBias * 0 });
+        }
+      }
+    } else {
+      // row 0 (4 cups) at nearZ; subsequent rows increase z (toward mid / opponent)
+      for (let r = 0; r < rows.length; r++) {
+        const count = rows[r];
+        const z = nearZ + r * gapZ;
+        const rowW = (count - 1) * gapX;
+        for (let i = 0; i < count; i++) {
+          const x = -rowW / 2 + i * gapX;
+          slots.push({ x, z });
+        }
       }
     }
-    return positions;
-  }
-
-  function initCups() {
-    const top = cupPositions('top');
-    const bot = cupPositions('bottom');
-    // cups[0] = player0's cups (defended at bottom when they shoot? Actually:
-    // Player shoots at OPPONENT cups. We always draw target at TOP and shooter's cups at BOTTOM.
-    // So cups[turn] shown at bottom, cups[1-turn] at top — we remap each turn.
-    // Store by owner: cups[i] belongs to player i (opponent aims at these).
-    state.cups[0] = bot.map(p => ({ ...p, alive: true, owner: 0 }));
-    state.cups[1] = top.map(p => ({ ...p, alive: true, owner: 1 }));
-    // Initial: turn 0 shoots at player1's cups (top). Player0 cups at bottom.
-    syncCupLayout();
-  }
-
-  function rebuildCupPositions() {
-    // Preserve alive flags, recompute x,y,r for current orientation
-    syncCupLayout();
-  }
-
-  function syncCupLayout() {
-    // Always: opponent cups at TOP (target), own cups at BOTTOM
-    const shooter = state.turn;
-    const target = 1 - shooter;
-    const topPos = cupPositions('top');
-    const botPos = cupPositions('bottom');
-    // Map remaining alive cups into positions — keep relative triangle order by index
-    placeAlive(state.cups[target], topPos);
-    placeAlive(state.cups[shooter], botPos);
-  }
-
-  function placeAlive(cupArr, positions) {
-    // Place living cups into first N positions of a fresh triangle for their count (auto re-rack visual optional)
-    // For standard play we keep original slots; re-rack button packs them.
-    const r = positions[0] ? positions[0].r : 12;
-    for (let i = 0; i < cupArr.length; i++) {
-      if (i < positions.length) {
-        cupArr[i].x = positions[i].x;
-        cupArr[i].y = positions[i].y;
-        cupArr[i].r = r;
-      }
-    }
-  }
-
-  function living(cups) {
-    return cups.filter(c => c.alive);
-  }
-
-  function countAlive(i) {
-    return state.cups[i].filter(c => c.alive).length;
-  }
-
-  // Re-rack: pack living cups into a compact triangle at that end
-  function rerackFor(owner, end) {
-    const alive = living(state.cups[owner]);
-    const n = alive.length;
-    if (n === 0) return;
-    // Build compact rows for n cups
-    const rows = packRows(n);
-    const t = state.table;
-    const cupR = Math.min(t.w, t.h) * 0.048;
-    const gap = cupR * 2.15;
-    const rackDepth = (rows.length - 1) * gap * 0.9;
-    const startY = end === 'top'
-      ? t.y + cupR * 1.6
-      : t.y + t.h - cupR * 1.6 - rackDepth;
-    let idx = 0;
-    for (let r = 0; r < rows.length; r++) {
-      const count = rows[r];
-      const rowW = (count - 1) * gap;
-      const y = startY + r * gap * 0.9;
-      for (let i = 0; i < count; i++) {
-        const x = t.x + t.w / 2 - rowW / 2 + i * gap;
-        alive[idx].x = x;
-        alive[idx].y = y;
-        alive[idx].r = cupR;
-        idx++;
-      }
-    }
+    return slots;
   }
 
   function packRows(n) {
-    // Prefer classic shapes: 10→4-3-2-1, 6→3-2-1, 3→2-1, 1→1, else fill rows top-heavy
     if (n === 10) return [4, 3, 2, 1];
+    if (n === 9) return [4, 3, 2];
+    if (n === 8) return [3, 3, 2];
+    if (n === 7) return [3, 2, 2];
     if (n === 6) return [3, 2, 1];
+    if (n === 5) return [3, 2];
     if (n === 4) return [3, 1];
     if (n === 3) return [2, 1];
     if (n === 2) return [2];
     if (n === 1) return [1];
-    // Generic: fill rows of up to 4
+    if (n <= 0) return [];
     const rows = [];
     let left = n;
     while (left > 0) {
@@ -666,13 +594,72 @@
     return rows;
   }
 
+  function initCups() {
+    // Full 10-cup triangles; dead cups keep slots until Re-rack packs them
+    const far = rackSlots('far', 10);
+    const near = rackSlots('near', 10);
+    state.cups[0] = near.map((p, i) => ({ x: p.x, z: p.z, alive: true, owner: 0, idx: i, slot: i }));
+    state.cups[1] = far.map((p, i) => ({ x: p.x, z: p.z, alive: true, owner: 1, idx: i, slot: i }));
+    // Remember canonical full-rack slots per end for hole-preserving layout
+    state.fullFar = far;
+    state.fullNear = near;
+    syncCupLayout();
+  }
+
+  function syncCupLayout() {
+    // Always: opponent at FAR, own at NEAR (camera from shooter's end)
+    // Preserve holes: map each cup back to its slot index in the full 10-triangle
+    const shooter = state.turn;
+    const target = 1 - shooter;
+    applyFullSlots(state.cups[target], state.fullFar || rackSlots('far', 10));
+    applyFullSlots(state.cups[shooter], state.fullNear || rackSlots('near', 10));
+  }
+
+  function applyFullSlots(cupArr, slots) {
+    for (let i = 0; i < cupArr.length; i++) {
+      const s = slots[cupArr[i].slot != null ? cupArr[i].slot : i];
+      if (s) {
+        cupArr[i].x = s.x;
+        cupArr[i].z = s.z;
+      }
+    }
+  }
+
+
+  function living(cups) { return cups.filter(c => c.alive); }
+  function countAlive(i) { return state.cups[i].filter(c => c.alive).length; }
+
   function doRerack() {
     if (state.phase !== 'idle' && state.phase !== 'pass') return;
     const shooter = state.turn;
     const target = 1 - shooter;
-    rerackFor(target, 'top');
-    rerackFor(shooter, 'bottom');
+    // Pack living cups into compact triangles; rewrite slot indices + canonical templates
+    packOwner(target, 'far');
+    packOwner(shooter, 'near');
     setFeedback('Re-racked!', 'sink');
+  }
+
+  function packOwner(owner, end) {
+    const alive = state.cups[owner].filter(c => c.alive);
+    const dead = state.cups[owner].filter(c => !c.alive);
+    const n = Math.max(alive.length, 1);
+    const packed = rackSlots(end, alive.length || 1);
+    // Canonical template stays size 10 so turn-flip applyFullSlots is stable;
+    // living cups occupy 0..n-1 of a fresh packed layout stored on the cups themselves.
+    alive.forEach((c, i) => {
+      c.slot = i;
+      if (i < packed.length) {
+        c.x = packed[i].x;
+        c.z = packed[i].z;
+      }
+    });
+    dead.forEach((c, i) => { c.slot = alive.length + i; });
+    state.cups[owner] = alive.concat(dead);
+    // Store packed slots padded to 10 so syncCupLayout preserves the packed shape
+    const pad = rackSlots(end, 10);
+    for (let i = 0; i < packed.length && i < pad.length; i++) pad[i] = packed[i];
+    if (end === 'far') state.fullFar = pad;
+    else state.fullNear = pad;
   }
 
   // ——— Game flow ———
@@ -684,7 +671,6 @@
     state.phase = 'idle';
     state.ball = null;
     state.particles = [];
-    state.firstTurn = true;
     passOverlay.classList.remove('show');
     setFeedback('Drag back & release!', 'sink');
     aimHint.textContent = 'Drag back to aim · release to throw';
@@ -713,13 +699,10 @@
   }
 
   function endThrow(hit) {
-    state.lastThrowHit = hit;
     state.ball = null;
     state.phase = 'settle';
-
     const target = 1 - state.turn;
     if (countAlive(target) === 0) {
-      // Win
       setTimeout(() => {
         state.phase = 'over';
         document.getElementById('winnerName').textContent = state.names[state.turn];
@@ -727,15 +710,13 @@
       }, 700);
       return;
     }
-
-    // Next turn after brief pause
     setTimeout(() => {
       state.turn = 1 - state.turn;
       syncCupLayout();
       updateHUD();
       state.phase = 'pass';
       showPass();
-    }, hit ? 900 : 650);
+    }, hit ? 950 : 700);
   }
 
   function showPass() {
@@ -757,7 +738,56 @@
     aimHint.textContent = 'Drag back to aim · release to throw';
   }
 
-  // ——— Input (touch + mouse) ———
+  // ——— Aiming / throw ———
+  // Shoot origin in world
+  function throwOrigin() {
+    return { x: 0, y: 0.35, z: 0.08 };
+  }
+
+  function aimFromDrag() {
+    const dx = state.aim.sx - state.aim.cx; // pull right → aim right (yaw+)
+    const dy = state.aim.cy - state.aim.sy; // pull down (back) → power+
+    const pullY = Math.max(0, dy);
+    const maxPull = Math.min(state.W, state.H) * 0.38;
+    const power = Math.min(1, pullY / maxPull);
+    // Max yaw ~0.14 rad ≈ outer cups at far rack (full left/right drag)
+    const yaw = Math.max(-0.14, Math.min(0.14, (dx / maxPull) * 0.14));
+    return { power, yaw, pullY, maxPull };
+  }
+
+  function launchVel(power, yaw) {
+    // Tuned: ~0.45–0.65 power sinks into far rack; low short, high long
+    const speed = 3.2 + power * 4.5;
+    const loft = 7.2 + power * 3.2;
+    const vz = Math.cos(yaw) * speed;
+    const vx = Math.sin(yaw) * speed;
+    return { vx, vy: loft, vz };
+  }
+
+  function sampleTrajectory(power, yaw, steps) {
+    const o = throwOrigin();
+    const v = launchVel(power, yaw);
+    const pts = [];
+    let x = o.x, y = o.y, z = o.z;
+    let vx = v.vx, vy = v.vy, vz = v.vz;
+    const dt = 0.045;
+    for (let i = 0; i < steps; i++) {
+      vy -= GRAVITY * dt;
+      x += vx * dt;
+      y += vy * dt;
+      z += vz * dt;
+      if (y < BALL_R) {
+        y = BALL_R;
+        pts.push({ x, y, z });
+        break;
+      }
+      if (z > TABLE_LEN + 1.5 || z < -1) break;
+      pts.push({ x, y, z });
+    }
+    return pts;
+  }
+
+  // ——— Input ———
   function canvasPos(e) {
     const rect = canvas.getBoundingClientRect();
     let clientX, clientY;
@@ -779,19 +809,15 @@
     if (passOverlay.classList.contains('show')) return;
     e.preventDefault();
     const p = canvasPos(e);
-    // Must start drag in lower portion (shooting zone)
-    if (p.y < state.H * 0.45) return;
+    if (p.y < state.H * 0.42) return; // lower portion only
     state.aim.active = true;
     state.aim.sx = p.x;
     state.aim.sy = p.y;
     state.aim.cx = p.x;
     state.aim.cy = p.y;
     state.phase = 'aiming';
-    // Place ball at start
-    state.ball = {
-      x: p.x, y: p.y, vx: 0, vy: 0, r: BALL_R,
-      flying: false, trail: []
-    };
+    const o = throwOrigin();
+    state.ball = { x: o.x, y: o.y, z: o.z, vx: 0, vy: 0, vz: 0, flying: false, trail: [] };
   }
 
   function onPointerMove(e) {
@@ -800,10 +826,9 @@
     const p = canvasPos(e);
     state.aim.cx = p.x;
     state.aim.cy = p.y;
-    if (state.ball && !state.ball.flying) {
-      state.ball.x = state.aim.sx;
-      state.ball.y = state.aim.sy;
-    }
+    const a = aimFromDrag();
+    state.aim.power = a.power;
+    state.aim.yaw = a.yaw;
   }
 
   function onPointerUp(e) {
@@ -813,35 +838,20 @@
     state.aim.cx = p.x;
     state.aim.cy = p.y;
     state.aim.active = false;
-
-    // Velocity from pull-back (slingshot): opposite of drag vector
-    const dx = state.aim.sx - state.aim.cx;
-    const dy = state.aim.sy - state.aim.cy;
-    const dist = Math.hypot(dx, dy);
-    const minPull = 18;
-    if (dist < minPull) {
-      // Cancel weak pull
+    const a = aimFromDrag();
+    if (a.power < 0.12) {
       state.ball = null;
       state.phase = 'idle';
       setFeedback('Pull back farther', 'miss');
       return;
     }
-
-    // Cap power
-    const maxPull = Math.min(state.W, state.H) * 0.42;
-    const pull = Math.min(dist, maxPull);
-    const power = (pull / maxPull) * 720; // px/s scale
-    const angle = Math.atan2(dy, dx);
-    // Prefer upward throws — boost if mostly upward
-    let vx = Math.cos(angle) * power;
-    let vy = Math.sin(angle) * power;
-    // Soft clamp so crazy side-angles still go mostly up-table
-    if (vy > -80) vy = Math.min(vy, -120) - pull * 0.8;
-
-    state.ball.vx = vx;
-    state.ball.vy = vy;
-    state.ball.flying = true;
-    state.ball.trail = [];
+    const v = launchVel(a.power, a.yaw);
+    const o = throwOrigin();
+    state.ball = {
+      x: o.x, y: o.y, z: o.z,
+      vx: v.vx, vy: v.vy, vz: v.vz,
+      flying: true, trail: [], sunk: false
+    };
     state.phase = 'flying';
     aimHint.textContent = '';
   }
@@ -854,366 +864,429 @@
   window.addEventListener('mousemove', onPointerMove);
   window.addEventListener('mouseup', onPointerUp);
 
-  // Prevent pinch-zoom / gesture scroll
-  document.addEventListener('gesturestart', e => e.preventDefault());
-  document.addEventListener('gesturechange', e => e.preventDefault());
-
-  // ——— Physics ———
-  let lastTs = 0;
-  function tick(ts) {
-    const dt = Math.min(0.032, (ts - (lastTs || ts)) / 1000);
-    lastTs = ts;
-    update(dt);
-    draw();
-    requestAnimationFrame(tick);
-  }
-
-  function update(dt) {
-    if (state.feedbackTimer > 0) {
-      state.feedbackTimer -= dt;
-      if (state.feedbackTimer <= 0) feedbackEl.textContent = '';
-    }
-
-    // Particles
-    for (let i = state.particles.length - 1; i >= 0; i--) {
-      const p = state.particles[i];
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
-      p.vy += 200 * dt;
-      p.life -= dt;
-      if (p.life <= 0) state.particles.splice(i, 1);
-    }
-
-    if (state.phase !== 'flying' || !state.ball) return;
-
+  // ——— Physics / sink ———
+  function updateBall(dt) {
     const b = state.ball;
-    b.trail.push({ x: b.x, y: b.y });
-    if (b.trail.length > 14) b.trail.shift();
+    if (!b || !b.flying) return;
 
-    // Sub-steps for better collision
-    const steps = 4;
-    const sdt = dt / steps;
-    for (let s = 0; s < steps; s++) {
-      b.vy += G * sdt * 0.55; // gravity (tuned)
-      b.x += b.vx * sdt;
-      b.y += b.vy * sdt;
+    b.trail.push({ x: b.x, y: b.y, z: b.z });
+    if (b.trail.length > 18) b.trail.shift();
 
-      // Soft bounce on table sides
-      const t = state.table;
-      if (b.x - b.r < t.x) { b.x = t.x + b.r; b.vx *= -BOUNCE; }
-      if (b.x + b.r > t.x + t.w) { b.x = t.x + t.w - b.r; b.vx *= -BOUNCE; }
+    b.vy -= GRAVITY * dt;
+    b.x += b.vx * dt;
+    b.y += b.vy * dt;
+    b.z += b.vz * dt;
 
-      // Hit detection vs TARGET cups (top)
+    // Sink: over a rim while dropping through the cup mouth (not just 2D overlap)
+    if (!b.sunk && b.vy < 1.5 && b.y <= CUP_H + BALL_R * 0.35 && b.y >= BALL_R * 0.25) {
       const target = 1 - state.turn;
-      for (const cup of state.cups[target]) {
-        if (!cup.alive) continue;
-        const dx = b.x - cup.x;
-        const dy = b.y - cup.y;
-        const dist = Math.hypot(dx, dy);
-        // Sink if ball center near cup opening and moving somewhat downward or slow
-        const sinkR = cup.r * 0.72;
-        if (dist < sinkR && b.y < cup.y + cup.r * 0.35) {
-          cup.alive = false;
-          spawnSplash(cup.x, cup.y);
-          setFeedback('YOU SUNK IT! 🍻', 'sink');
-          endThrow(true);
-          return;
-        }
-        // Rim bounce
-        const rimR = cup.r * 1.05;
-        if (dist < rimR + b.r && dist > sinkR) {
-          const nx = dx / (dist || 1);
-          const ny = dy / (dist || 1);
-          const vn = b.vx * nx + b.vy * ny;
-          if (vn < 0) {
-            b.vx -= 1.7 * vn * nx;
-            b.vy -= 1.7 * vn * ny;
-            b.vx *= 0.9;
-            b.vy *= 0.9;
-            b.x = cup.x + nx * (rimR + b.r + 0.5);
-            b.y = cup.y + ny * (rimR + b.r + 0.5);
-          }
-        }
+      const hit = checkSink(b, state.cups[target]);
+      if (hit) {
+        b.sunk = true;
+        hit.alive = false;
+        spawnSplash(hit.x, CUP_H * 0.7, hit.z);
+        setFeedback('SINK! 🍻', 'sink');
+        updateHUD();
+        b.x = hit.x; b.z = hit.z;
+        b.vx *= 0.08; b.vz *= 0.08;
+        b.vy = Math.min(b.vy, -1.5);
+        setTimeout(() => endThrow(true), 420);
+        return;
       }
     }
 
-    // Miss: ball leaves top, or lands past mid going down slowly, or off bottom
-    const t = state.table;
-    if (b.y < t.y - 40 || b.y > state.H + 30 ||
-        (b.y > state.H * 0.55 && b.vy > 80 && Math.hypot(b.vx, b.vy) < 220)) {
-      // Floor bounce once then miss
-      if (b.y > t.y + t.h - 8 && b.vy > 0) {
-        b.y = t.y + t.h - 8;
-        b.vy *= -BOUNCE * 0.6;
-        b.vx *= FRICTION;
-        if (Math.abs(b.vy) < 60) {
-          setFeedback('Miss', 'miss');
-          endThrow(false);
-        }
-      } else if (b.y < t.y - 40 || b.y > state.H + 30) {
+    // Table bounce / miss
+    if (b.y <= BALL_R) {
+      b.y = BALL_R;
+      if (Math.abs(b.vy) < 2.2) {
+        // Came to rest — miss
         setFeedback('Miss', 'miss');
         endThrow(false);
+        return;
       }
+      b.vy = -b.vy * 0.38;
+      b.vx *= 0.78;
+      b.vz *= 0.78;
     }
 
-    // Timeout safety
-    if (Math.hypot(b.vx, b.vy) < 25 && b.y > state.H * 0.4) {
+    // Out of bounds
+    if (b.z > TABLE_LEN + 2.2 || b.z < -1.5 || Math.abs(b.x) > TABLE_W * 1.6) {
       setFeedback('Miss', 'miss');
       endThrow(false);
     }
   }
 
-  function spawnSplash(x, y) {
-    for (let i = 0; i < 18; i++) {
+  function checkSink(ball, cups) {
+    // Ball center projected on table must be inside rim ellipse (circle in xz),
+    // and height must be landing into cup (already gated by caller).
+    const rim = CUP_R * 0.98;
+    let best = null;
+    let bestD = Infinity;
+    for (const c of cups) {
+      if (!c.alive) continue;
+      const dx = ball.x - c.x;
+      const dz = ball.z - c.z;
+      const d = Math.hypot(dx, dz);
+      if (d < rim && d < bestD) {
+        bestD = d;
+        best = c;
+      }
+    }
+    return best;
+  }
+
+  function spawnSplash(x, y, z) {
+    for (let i = 0; i < 14; i++) {
       const a = Math.random() * Math.PI * 2;
-      const sp = 80 + Math.random() * 180;
+      const sp = 0.8 + Math.random() * 2.2;
       state.particles.push({
-        x, y,
-        vx: Math.cos(a) * sp,
-        vy: Math.sin(a) * sp - 80,
-        life: 0.4 + Math.random() * 0.5,
-        color: i % 2 ? '#00e5a8' : '#ff6bb5'
+        x, y, z,
+        vx: Math.cos(a) * sp * 0.4,
+        vy: 1.5 + Math.random() * 3,
+        vz: Math.sin(a) * sp * 0.4,
+        life: 0.5 + Math.random() * 0.4,
+        color: Math.random() > 0.4 ? '#00e5a8' : '#7c5cff'
       });
     }
   }
 
-  // ——— Draw ———
+  function updateParticles(dt) {
+    for (const p of state.particles) {
+      p.life -= dt;
+      p.vy -= GRAVITY * 0.55 * dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.z += p.vz * dt;
+    }
+    state.particles = state.particles.filter(p => p.life > 0 && p.y > -0.2);
+  }
+
+  // ——— Drawing ———
   function draw() {
     const W = state.W, H = state.H;
-    if (!W || !H) return;
+    if (W < 10 || H < 10) return;
     ctx.clearRect(0, 0, W, H);
 
-    // Room vibe
-    const g = ctx.createRadialGradient(W/2, H*0.3, 10, W/2, H*0.5, H*0.8);
-    g.addColorStop(0, '#1a0f30');
-    g.addColorStop(1, '#0a0612');
-    ctx.fillStyle = g;
+    // Background vibe
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, '#1a0e30');
+    bg.addColorStop(0.45, '#0c0818');
+    bg.addColorStop(1, '#080510');
+    ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
 
-    if (!state.table) return;
     drawTable();
-    drawCups(state.cups[1 - state.turn], true);  // target
-    drawCups(state.cups[state.turn], false);     // own
+    drawCupsAndBall();
+    if (state.phase === 'aiming') drawAimPreview();
+    drawParticles();
+    drawPowerMeter();
+  }
 
-    if (state.phase === 'aiming' && state.aim.active) drawAim();
-    if (state.ball) drawBall(state.ball);
+  function drawTable() {
+    const W = state.W, H = state.H;
+    // Corners of table top (y=0)
+    const corners = [
+      [-TABLE_W / 2, 0, 0],
+      [ TABLE_W / 2, 0, 0],
+      [ TABLE_W / 2, 0, TABLE_LEN],
+      [-TABLE_W / 2, 0, TABLE_LEN]
+    ].map(c => project(c[0], c[1], c[2]));
 
-    for (const p of state.particles) {
-      ctx.globalAlpha = Math.max(0, p.life * 2);
-      ctx.fillStyle = p.color;
+    // Felt
+    ctx.beginPath();
+    ctx.moveTo(corners[0].sx, corners[0].sy);
+    for (let i = 1; i < 4; i++) ctx.lineTo(corners[i].sx, corners[i].sy);
+    ctx.closePath();
+    const felt = ctx.createLinearGradient(0, corners[2].sy, 0, corners[0].sy);
+    felt.addColorStop(0, '#1f7a4a');
+    felt.addColorStop(0.5, '#17633c');
+    felt.addColorStop(1, '#0f3d26');
+    ctx.fillStyle = felt;
+    ctx.fill();
+
+    // Neon edge
+    ctx.strokeStyle = 'rgba(124, 92, 255, 0.55)';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255, 45, 149, 0.35)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Center line
+    const midN = project(0, 0.01, TABLE_LEN * 0.48);
+    const midF = project(0, 0.01, TABLE_LEN * 0.52);
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([6, 8]);
+    ctx.beginPath();
+    ctx.moveTo(project(-TABLE_W * 0.35, 0.01, TABLE_LEN * 0.5).sx, midN.sy);
+    ctx.lineTo(project( TABLE_W * 0.35, 0.01, TABLE_LEN * 0.5).sx, midF.sy);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Side rails (simple quads)
+    drawRail(-TABLE_W / 2, -0.08);
+    drawRail( TABLE_W / 2,  0.08);
+  }
+
+  function drawRail(xEdge, outward) {
+    const topNear = project(xEdge, 0.06, 0);
+    const topFar  = project(xEdge, 0.06, TABLE_LEN);
+    const botNear = project(xEdge + outward, -0.15, 0);
+    const botFar  = project(xEdge + outward, -0.15, TABLE_LEN);
+    ctx.beginPath();
+    ctx.moveTo(topNear.sx, topNear.sy);
+    ctx.lineTo(topFar.sx, topFar.sy);
+    ctx.lineTo(botFar.sx, botFar.sy);
+    ctx.lineTo(botNear.sx, botNear.sy);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(40, 24, 70, 0.85)';
+    ctx.fill();
+  }
+
+  function drawCup(cup, isTarget) {
+    if (!cup.alive) return;
+    const rimY = CUP_H;
+    const baseY = 0.02;
+    const pRim = project(cup.x, rimY, cup.z);
+    const pBase = project(cup.x, baseY, cup.z);
+    const rx = Math.max(4, CUP_R * pRim.scale);
+    const ry = Math.max(2.2, rx * 0.38); // ellipse foreshortening
+    const baseRx = Math.max(3, CUP_R * 0.85 * pBase.scale);
+    const baseRy = Math.max(1.8, baseRx * 0.38);
+    const bodyH = Math.max(6, pBase.sy - pRim.sy);
+
+    // Shadow on table
+    const pSh = project(cup.x, 0.01, cup.z);
+    ctx.beginPath();
+    ctx.ellipse(pSh.sx, pSh.sy + 2, rx * 0.95, ry * 0.7, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.fill();
+
+    // Cup body (trapezoid-ish cylinder)
+    const grad = ctx.createLinearGradient(pRim.sx - rx, pRim.sy, pRim.sx + rx, pRim.sy);
+    if (isTarget) {
+      grad.addColorStop(0, '#c8d0dc');
+      grad.addColorStop(0.45, '#f2f5fa');
+      grad.addColorStop(1, '#9aa3b0');
+    } else {
+      grad.addColorStop(0, '#6b5b8a');
+      grad.addColorStop(0.45, '#a894c4');
+      grad.addColorStop(1, '#4a3d66');
+    }
+    ctx.beginPath();
+    ctx.moveTo(pRim.sx - rx, pRim.sy);
+    ctx.lineTo(pRim.sx + rx, pRim.sy);
+    ctx.lineTo(pBase.sx + baseRx, pBase.sy);
+    ctx.lineTo(pBase.sx - baseRx, pBase.sy);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Base ellipse
+    ctx.beginPath();
+    ctx.ellipse(pBase.sx, pBase.sy, baseRx, baseRy, 0, 0, Math.PI * 2);
+    ctx.fillStyle = isTarget ? '#8a93a0' : '#3d3255';
+    ctx.fill();
+
+    // Liquid
+    ctx.beginPath();
+    ctx.ellipse(pRim.sx, pRim.sy + ry * 0.15, rx * 0.78, ry * 0.72, 0, 0, Math.PI * 2);
+    ctx.fillStyle = isTarget ? 'rgba(255, 200, 80, 0.55)' : 'rgba(124, 92, 255, 0.35)';
+    ctx.fill();
+
+    // Open rim (ellipse outline) — critical for 3D read
+    ctx.beginPath();
+    ctx.ellipse(pRim.sx, pRim.sy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.strokeStyle = isTarget ? '#ff4d6d' : '#c77dff';
+    ctx.lineWidth = Math.max(1.5, rx * 0.12);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(pRim.sx, pRim.sy, rx * 0.92, ry * 0.92, 0, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  function drawBallAt(x, y, z, alpha) {
+    const p = project(x, y, z);
+    const r = Math.max(3, BALL_R * p.scale * (1 + y * 0.15));
+    // Shadow
+    const sh = project(x, 0.01, z);
+    const shR = Math.max(2, BALL_R * sh.scale * (1.1 - Math.min(0.7, y * 0.5)));
+    ctx.globalAlpha = (alpha == null ? 1 : alpha) * 0.4;
+    ctx.beginPath();
+    ctx.ellipse(sh.sx, sh.sy, shR, shR * 0.35, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#000';
+    ctx.fill();
+    ctx.globalAlpha = alpha == null ? 1 : alpha;
+    // Ball
+    const g = ctx.createRadialGradient(p.sx - r * 0.3, p.sy - r * 0.35, r * 0.1, p.sx, p.sy, r);
+    g.addColorStop(0, '#ffffff');
+    g.addColorStop(0.45, '#ff8cc8');
+    g.addColorStop(1, '#ff2d95');
+    ctx.beginPath();
+    ctx.arc(p.sx, p.sy, r, 0, Math.PI * 2);
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  function drawCupsAndBall() {
+    const shooter = state.turn;
+    const target = 1 - shooter;
+    // Collect drawables with depth for painter's algorithm
+    const items = [];
+
+    for (const c of state.cups[target]) {
+      if (c.alive) items.push({ kind: 'cup', cup: c, isTarget: true, z: c.z, y: CUP_H });
+    }
+    for (const c of state.cups[shooter]) {
+      if (c.alive) items.push({ kind: 'cup', cup: c, isTarget: false, z: c.z, y: CUP_H });
+    }
+    if (state.ball) {
+      items.push({ kind: 'ball', z: state.ball.z, y: state.ball.y });
+    }
+
+    // Far first (high z), then near; ball interleaved by z, and if similar z draw ball after cups below it
+    items.sort((a, b) => {
+      if (Math.abs(a.z - b.z) > 0.02) return b.z - a.z; // far → near
+      return (a.y || 0) - (b.y || 0);
+    });
+
+    // Trail under ball
+    if (state.ball && state.ball.trail) {
+      const tr = state.ball.trail;
+      for (let i = 0; i < tr.length; i++) {
+        const t = tr[i];
+        drawBallAt(t.x, t.y, t.z, (i + 1) / tr.length * 0.35);
+      }
+    }
+
+    for (const it of items) {
+      if (it.kind === 'cup') drawCup(it.cup, it.isTarget);
+      else if (it.kind === 'ball' && state.ball) {
+        drawBallAt(state.ball.x, state.ball.y, state.ball.z, 1);
+      }
+    }
+  }
+
+  function drawAimPreview() {
+    const a = aimFromDrag();
+    if (a.power < 0.05) return;
+    const pts = sampleTrajectory(a.power, a.yaw, 28);
+    for (let i = 0; i < pts.length; i++) {
+      const t = pts[i];
+      const p = project(t.x, t.y, t.z);
+      const r = Math.max(1.5, 3.5 * (1 - i / pts.length) * (0.6 + a.power * 0.5));
       ctx.beginPath();
-      ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+      ctx.arc(p.sx, p.sy, r, 0, Math.PI * 2);
+      ctx.fillStyle = i === pts.length - 1
+        ? 'rgba(0, 229, 168, 0.85)'
+        : 'rgba(255, 200, 87, ' + (0.25 + 0.55 * (1 - i / pts.length)) + ')';
+      ctx.fill();
+    }
+
+    // Aim guide from finger
+    ctx.strokeStyle = 'rgba(255, 45, 149, 0.45)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 6]);
+    ctx.beginPath();
+    ctx.moveTo(state.aim.sx, state.aim.sy);
+    ctx.lineTo(state.aim.cx, state.aim.cy);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function drawPowerMeter() {
+    if (state.phase !== 'aiming') return;
+    const a = aimFromDrag();
+    const W = state.W, H = state.H;
+    const mw = 14, mh = H * 0.22;
+    const x = W - 28, y = H * 0.55;
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.fillRect(x, y, mw, mh);
+    const fill = mh * a.power;
+    const g = ctx.createLinearGradient(x, y + mh, x, y);
+    g.addColorStop(0, '#00e5a8');
+    g.addColorStop(0.6, '#ffc857');
+    g.addColorStop(1, '#ff2d95');
+    ctx.fillStyle = g;
+    ctx.fillRect(x, y + mh - fill, mw, fill);
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.strokeRect(x, y, mw, mh);
+  }
+
+  function drawParticles() {
+    for (const p of state.particles) {
+      const pr = project(p.x, p.y, p.z);
+      const r = Math.max(1.5, 4 * p.life);
+      ctx.globalAlpha = Math.max(0, p.life);
+      ctx.beginPath();
+      ctx.arc(pr.sx, pr.sy, r, 0, Math.PI * 2);
+      ctx.fillStyle = p.color;
       ctx.fill();
       ctx.globalAlpha = 1;
     }
   }
 
-  function drawTable() {
-    const t = state.table;
-    // Shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    roundRect(t.x + 4, t.y + 6, t.w, t.h, 14);
-    ctx.fill();
+  // ——— Loop ———
+  function frame(ts) {
+    if (!state.lastTs) state.lastTs = ts;
+    let dt = (ts - state.lastTs) / 1000;
+    state.lastTs = ts;
+    if (dt > 0.05) dt = 0.05;
 
-    // Felt
-    const felt = ctx.createLinearGradient(t.x, t.y, t.x + t.w, t.y + t.h);
-    felt.addColorStop(0, '#1f6b42');
-    felt.addColorStop(0.5, '#185734');
-    felt.addColorStop(1, '#144a2c');
-    ctx.fillStyle = felt;
-    roundRect(t.x, t.y, t.w, t.h, 14);
-    ctx.fill();
-
-    // Wood rail
-    ctx.strokeStyle = '#5c3d1e';
-    ctx.lineWidth = 6;
-    roundRect(t.x, t.y, t.w, t.h, 14);
-    ctx.stroke();
-    ctx.strokeStyle = '#8b5a2b';
-    ctx.lineWidth = 2;
-    roundRect(t.x + 3, t.y + 3, t.w - 6, t.h - 6, 12);
-    ctx.stroke();
-
-    // Center line
-    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([8, 8]);
-    ctx.beginPath();
-    ctx.moveTo(t.x + 16, t.y + t.h / 2);
-    ctx.lineTo(t.x + t.w - 16, t.y + t.h / 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // Labels
-    ctx.fillStyle = 'rgba(255,255,255,0.25)';
-    ctx.font = '700 11px -apple-system, sans-serif';
-    ctx.textAlign = 'center';
-    const targetName = state.names[1 - state.turn];
-    const ownName = state.names[state.turn];
-    ctx.fillText(targetName.toUpperCase(), t.x + t.w / 2, t.y + 14);
-    ctx.fillText(ownName.toUpperCase() + ' (you)', t.x + t.w / 2, t.y + t.h - 8);
-  }
-
-  function drawCups(cups, isTarget) {
-    for (const c of cups) {
-      if (!c.alive) continue;
-      const r = c.r;
-      // Shadow
-      ctx.fillStyle = 'rgba(0,0,0,0.25)';
-      ctx.beginPath();
-      ctx.ellipse(c.x + 2, c.y + r * 0.55, r * 0.9, r * 0.35, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Cup body (top-down: circle with rim)
-      const body = ctx.createRadialGradient(c.x - r*0.2, c.y - r*0.2, r*0.1, c.x, c.y, r);
-      body.addColorStop(0, '#ffffff');
-      body.addColorStop(0.55, '#e8eef5');
-      body.addColorStop(1, '#b8c4d4');
-      ctx.fillStyle = body;
-      ctx.beginPath();
-      ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Beer liquid
-      const liquid = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, r * 0.72);
-      liquid.addColorStop(0, '#ffd56a');
-      liquid.addColorStop(0.7, '#e8a820');
-      liquid.addColorStop(1, '#c47a10');
-      ctx.fillStyle = liquid;
-      ctx.beginPath();
-      ctx.arc(c.x, c.y, r * 0.68, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Rim
-      ctx.strokeStyle = isTarget ? '#ff4d6d' : 'rgba(255,255,255,0.5)';
-      ctx.lineWidth = isTarget ? 3 : 2;
-      ctx.beginPath();
-      ctx.arc(c.x, c.y, r * 0.92, 0, Math.PI * 2);
-      ctx.stroke();
-
-      // Highlight
-      ctx.strokeStyle = 'rgba(255,255,255,0.55)';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(c.x - r*0.15, c.y - r*0.2, r * 0.45, -Math.PI*0.9, -Math.PI*0.2);
-      ctx.stroke();
+    if (state.feedbackTimer > 0) {
+      state.feedbackTimer -= dt;
+      if (state.feedbackTimer <= 0) feedbackEl.textContent = '';
     }
+
+    if (state.phase === 'flying') updateBall(dt);
+    updateParticles(dt);
+
+    if (gameScreen.classList.contains('active')) draw();
+    requestAnimationFrame(frame);
   }
-
-  function drawAim() {
-    const { sx, sy, cx, cy } = state.aim;
-    const dx = sx - cx;
-    const dy = sy - cy;
-    const dist = Math.hypot(dx, dy);
-    const maxPull = Math.min(state.W, state.H) * 0.42;
-    const pull = Math.min(dist, maxPull);
-
-    // Rubber band
-    ctx.strokeStyle = 'rgba(255, 105, 180, 0.7)';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(sx, sy);
-    ctx.lineTo(cx, cy);
-    ctx.stroke();
-
-    // Power arc / dots along predicted path
-    const power = (pull / maxPull) * 720;
-    let angle = Math.atan2(dy, dx);
-    let vx = Math.cos(angle) * power;
-    let vy = Math.sin(angle) * power;
-    if (vy > -80) vy = Math.min(vy, -120) - pull * 0.8;
-
-    let x = sx, y = sy;
-    ctx.fillStyle = 'rgba(255, 200, 87, 0.85)';
-    for (let i = 0; i < 16; i++) {
-      vy += G * 0.016 * 0.55;
-      x += vx * 0.016;
-      y += vy * 0.016;
-      const alpha = 1 - i / 16;
-      ctx.globalAlpha = alpha * 0.9;
-      ctx.beginPath();
-      ctx.arc(x, y, 3.5 - i * 0.12, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-
-    // Power bar near finger
-    const pct = pull / maxPull;
-    const bw = 64, bh = 8;
-    const bx = cx - bw / 2, by = cy + 28;
-    ctx.fillStyle = 'rgba(0,0,0,0.45)';
-    roundRect(bx, by, bw, bh, 4);
-    ctx.fill();
-    ctx.fillStyle = pct > 0.75 ? '#ff2d95' : pct > 0.4 ? '#ffc857' : '#00e5a8';
-    roundRect(bx, by, bw * pct, bh, 4);
-    ctx.fill();
-  }
-
-  function drawBall(b) {
-    // Trail
-    for (let i = 0; i < b.trail.length; i++) {
-      const t = b.trail[i];
-      ctx.globalAlpha = (i / b.trail.length) * 0.4;
-      ctx.fillStyle = '#fff';
-      ctx.beginPath();
-      ctx.arc(t.x, t.y, b.r * (0.4 + i / b.trail.length * 0.5), 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-
-    const grd = ctx.createRadialGradient(b.x - 3, b.y - 3, 1, b.x, b.y, b.r);
-    grd.addColorStop(0, '#ffffff');
-    grd.addColorStop(0.5, '#f0f0f0');
-    grd.addColorStop(1, '#c8c8c8');
-    ctx.fillStyle = grd;
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-  }
-
-  function roundRect(x, y, w, h, r) {
-    const rr = Math.min(r, w/2, h/2);
-    ctx.beginPath();
-    ctx.moveTo(x + rr, y);
-    ctx.arcTo(x + w, y, x + w, y + h, rr);
-    ctx.arcTo(x + w, y + h, x, y + h, rr);
-    ctx.arcTo(x, y + h, x, y, rr);
-    ctx.arcTo(x, y, x + w, y, rr);
-    ctx.closePath();
-  }
+  requestAnimationFrame(frame);
 
   // ——— Buttons ———
   document.getElementById('startBtn').addEventListener('click', startGame);
   document.getElementById('againBtn').addEventListener('click', startGame);
-  document.getElementById('homeBtn').addEventListener('click', () => showScreen(startScreen));
+  document.getElementById('homeBtn').addEventListener('click', () => {
+    showScreen(startScreen);
+    state.phase = 'idle';
+  });
   document.getElementById('menuBtn').addEventListener('click', () => {
     if (state.phase === 'flying') return;
     showScreen(startScreen);
+    state.phase = 'idle';
+    passOverlay.classList.remove('show');
   });
   document.getElementById('rerackBtn').addEventListener('click', doRerack);
   document.getElementById('passReadyBtn').addEventListener('click', dismissPass);
 
-  // Enter on name fields
-  document.getElementById('name2').addEventListener('keydown', e => {
-    if (e.key === 'Enter') startGame();
+  // Resize observers
+  window.addEventListener('resize', () => {
+    if (gameScreen.classList.contains('active')) resize();
   });
-
-  window.addEventListener('resize', resize);
-  window.addEventListener('orientationchange', () => setTimeout(resize, 250));
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', resize);
-  }
-  if (window.ResizeObserver) {
-    new ResizeObserver(() => {
+  window.addEventListener('orientationchange', () => {
+    setTimeout(() => { if (gameScreen.classList.contains('active')) resize(); }, 200);
+  });
+  if (typeof ResizeObserver !== 'undefined') {
+    const ro = new ResizeObserver(() => {
       if (gameScreen.classList.contains('active')) resize();
-    }).observe(document.getElementById('canvasWrap'));
+    });
+    ro.observe(document.getElementById('canvasWrap'));
   }
 
-  // Kick off render loop (start screen still fine)
-  requestAnimationFrame(tick);
+  // Prevent rubber-band scroll on iOS except on menu inputs
+  document.addEventListener('touchmove', (e) => {
+    if (gameScreen.classList.contains('active')) e.preventDefault();
+  }, { passive: false });
 })();
 </script>
 </body>
