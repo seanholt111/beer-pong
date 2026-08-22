@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a0612">
+<meta name="apple-mobile-web-app-title" content="Beer Pong">
+<title>Beer Pong</title>
+<style>
+  :root {
+    --bg: #0a0612;
+    --bg2: #140c22;
+    --panel: rgba(28, 16, 48, 0.92);
+    --neon: #ff2d95;
+    --neon2: #7c5cff;
+    --accent: #00e5a8;
+    --warn: #ffc857;
+    --text: #f5f0ff;
+    --muted: #a89bc4;
+    --table: #1a5c3a;
+    --table-edge: #0d3a24;
+    --cup: #e8eef5;
+    --cup-rim: #ff4d6d;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    touch-action: none;
+    overscroll-behavior: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  body {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    padding-top: var(--safe-top);
+    padding-bottom: var(--safe-bottom);
+    padding-left: var(--safe-left);
+    padding-right: var(--safe-right);
+  }
+
+  #app {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    max-width: 480px;
+    width: 100%;
+    margin: 0 auto;
+    position: relative;
+  }
+
+  /* Screens */
+  .screen {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    padding: 20px 18px;
+    z-index: 10;
+    background: radial-gradient(ellipse at 50% 0%, #2a1548 0%, var(--bg) 55%);
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+  .screen.active { display: flex; }
+
+  .logo {
+    text-align: center;
+    margin-top: 8vh;
+    margin-bottom: 28px;
+  }
+  .logo h1 {
+    font-size: clamp(2.4rem, 12vw, 3.2rem);
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #ff6bb5, #c77dff, #7c5cff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: none;
+    line-height: 1.05;
+  }
+  .logo .sub {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-top: 8px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid rgba(124, 92, 255, 0.35);
+    border-radius: 18px;
+    padding: 20px 18px;
+    margin-bottom: 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+  }
+
+  label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  input[type="text"] {
+    width: 100%;
+    font-size: 1.15rem;
+    padding: 14px 16px;
+    min-height: 48px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(0,0,0,0.35);
+    color: var(--text);
+    margin-bottom: 14px;
+    outline: none;
+    touch-action: manipulation;
+  }
+  input[type="text"]:focus {
+    border-color: var(--neon2);
+    box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.25);
+  }
+
+  .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 52px;
+    padding: 14px 20px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: transform 0.1s, filter 0.15s;
+    color: #fff;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary {
+    background: linear-gradient(135deg, #ff2d95, #7c5cff);
+    box-shadow: 0 6px 24px rgba(255, 45, 149, 0.35);
+  }
+  .btn-secondary {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    margin-top: 10px;
+  }
+  .btn-accent {
+    background: linear-gradient(135deg, #00c896, #00a87a);
+    box-shadow: 0 4px 16px rgba(0, 229, 168, 0.25);
+  }
+  .btn-sm {
+    min-height: 44px;
+    font-size: 0.95rem;
+    padding: 10px 14px;
+    width: auto;
+    flex: 1;
+  }
+
+  .howto {
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-top: 8px;
+  }
+  .howto li { margin-left: 1.1em; margin-bottom: 4px; }
+
+  /* Game HUD */
+  #gameScreen {
+    background: var(--bg);
+    padding: 0;
+    touch-action: none;
+  }
+
+  #hud {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px 6px;
+    background: linear-gradient(180deg, #160c28 0%, transparent 100%);
+    z-index: 5;
+  }
+
+  .hud-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .player-pill {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 10px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.05);
+    border: 2px solid transparent;
+    min-height: 56px;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .player-pill.active {
+    border-color: var(--neon);
+    background: rgba(255, 45, 149, 0.12);
+    box-shadow: 0 0 16px rgba(255, 45, 149, 0.2);
+  }
+  .player-pill .name {
+    font-size: 0.85rem;
+    font-weight: 700;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .player-pill .cups {
+    font-size: 1.35rem;
+    font-weight: 900;
+    color: var(--accent);
+    line-height: 1.1;
+  }
+  .player-pill .cups span {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .vs {
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  #turnBanner {
+    text-align: center;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--warn);
+    min-height: 22px;
+    letter-spacing: 0.02em;
+  }
+
+  #feedback {
+    text-align: center;
+    font-size: 1.05rem;
+    font-weight: 800;
+    min-height: 26px;
+    color: var(--accent);
+    transition: opacity 0.3s;
+  }
+  #feedback.miss { color: var(--muted); }
+  #feedback.sink { color: var(--accent); text-shadow: 0 0 12px rgba(0,229,168,0.5); }
+
+  #canvasWrap {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: none;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+    max-height: 100%;
+  }
+
+  #controls {
+    flex-shrink: 0;
+    display: flex;
+    gap: 8px;
+    padding: 8px 12px 12px;
+    background: linear-gradient(0deg, #12081e 0%, transparent 100%);
+  }
+
+  /* Pass phone overlay */
+  #passOverlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    background: rgba(8, 4, 16, 0.94);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 28px 24px;
+    text-align: center;
+    touch-action: manipulation;
+  }
+  #passOverlay.show { display: flex; }
+  #passOverlay h2 {
+    font-size: clamp(1.6rem, 7vw, 2.1rem);
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, #ff6bb5, #7c5cff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  #passOverlay p {
+    color: var(--muted);
+    font-size: 1rem;
+    margin-bottom: 28px;
+    line-height: 1.4;
+  }
+  #passOverlay .btn { max-width: 280px; }
+
+  /* End / start extras */
+  #winnerName {
+    font-size: clamp(2rem, 10vw, 2.8rem);
+    font-weight: 900;
+    text-align: center;
+    margin: 12px 0 8px;
+    background: linear-gradient(135deg, #ffc857, #ff6bb5);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .end-sub {
+    text-align: center;
+    color: var(--muted);
+    margin-bottom: 28px;
+  }
+
+  .hint {
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--muted);
+    padding: 0 12px 4px;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- START -->
+  <div id="startScreen" class="screen active">
+    <div class="logo">
+      <h1>🍺 Beer Pong</h1>
+      <div class="sub">Pass-the-phone · 2 players</div>
+    </div>
+    <div class="card">
+      <label for="name1">Player 1</label>
+      <input type="text" id="name1" value="Sean" maxlength="16" autocomplete="off" enterkeyhint="next">
+      <label for="name2">Player 2</label>
+      <input type="text" id="name2" value="Guest" maxlength="16" autocomplete="off" enterkeyhint="done">
+      <button class="btn btn-primary" id="startBtn" type="button">Start Game</button>
+    </div>
+    <div class="card howto">
+      <strong style="color:var(--text)">How to play</strong>
+      <ul style="margin-top:8px">
+        <li>Drag back like a slingshot, release to throw</li>
+        <li>Sink all 10 of your opponent's cups</li>
+        <li>Pass the phone each turn</li>
+        <li>Re-rack anytime with the button</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- GAME -->
+  <div id="gameScreen" class="screen">
+    <div id="hud">
+      <div class="hud-row">
+        <div class="player-pill" id="pill0">
+          <div class="name" id="hudName0">Sean</div>
+          <div class="cups" id="hudCups0">10 <span>cups</span></div>
+        </div>
+        <div class="vs">VS</div>
+        <div class="player-pill" id="pill1">
+          <div class="name" id="hudName1">Guest</div>
+          <div class="cups" id="hudCups1">10 <span>cups</span></div>
+        </div>
+      </div>
+      <div id="turnBanner">Sean's turn — aim at Guest's cups</div>
+      <div id="feedback"></div>
+    </div>
+    <div id="canvasWrap">
+      <canvas id="game"></canvas>
+      <div id="passOverlay">
+        <h2 id="passTitle">Pass to Guest</h2>
+        <p id="passMsg">Hand the phone over. Tap when you're ready to shoot.</p>
+        <button class="btn btn-primary" id="passReadyBtn" type="button">I'm ready</button>
+      </div>
+    </div>
+    <p class="hint" id="aimHint">Drag back to aim · release to throw</p>
+    <div id="controls">
+      <button class="btn btn-secondary btn-sm" id="rerackBtn" type="button">Re-rack</button>
+      <button class="btn btn-secondary btn-sm" id="menuBtn" type="button">Menu</button>
+    </div>
+  </div>
+
+  <!-- END -->
+  <div id="endScreen" class="screen">
+    <div class="logo" style="margin-top:12vh">
+      <h1>Winner!</h1>
+    </div>
+    <div id="winnerName">Sean</div>
+    <p class="end-sub">cleared the table 🍻</p>
+    <div class="card">
+      <button class="btn btn-primary" id="againBtn" type="button">Play Again</button>
+      <button class="btn btn-secondary" id="homeBtn" type="button">Change Names</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ——— DOM ———
+  const startScreen = document.getElementById('startScreen');
+  const gameScreen = document.getElementById('gameScreen');
+  const endScreen = document.getElementById('endScreen');
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const passOverlay = document.getElementById('passOverlay');
+  const feedbackEl = document.getElementById('feedback');
+  const turnBanner = document.getElementById('turnBanner');
+  const aimHint = document.getElementById('aimHint');
+
+  // ——— State ———
+  const state = {
+    names: ['Sean', 'Guest'],
+    cups: [[], []],          // each: {x,y,r, alive}
+    turn: 0,                 // shooter index (0 or 1) — aims at opponent's cups
+    phase: 'idle',           // idle | aiming | flying | settle | pass | over
+    ball: null,
+    aim: { active: false, sx: 0, sy: 0, cx: 0, cy: 0 },
+    feedbackTimer: 0,
+    dpr: 1,
+    W: 0, H: 0,              // CSS pixels of canvas
+    table: null,             // layout rect in canvas CSS px
+    particles: [],
+    lastThrowHit: false,
+    firstTurn: true
+  };
+
+  // Physics constants (tuned for portrait phones)
+  const G = 980;             // px/s^2 downward in screen space for arc feel
+  const BOUNCE = 0.35;
+  const FRICTION = 0.82;
+  const BALL_R = 9;
+
+  // ——— Layout helpers ———
+  function showScreen(el) {
+    [startScreen, gameScreen, endScreen].forEach(s => s.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  function resize() {
+    const wrap = document.getElementById('canvasWrap');
+    const rect = wrap.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    state.dpr = dpr;
+    state.W = Math.max(1, Math.floor(rect.width));
+    state.H = Math.max(1, Math.floor(rect.height));
+    canvas.width = Math.floor(state.W * dpr);
+    canvas.height = Math.floor(state.H * dpr);
+    canvas.style.width = state.W + 'px';
+    canvas.style.height = state.H + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    layoutTable();
+    // Reposition cups if game in progress
+    if (state.cups[0].length) {
+      rebuildCupPositions();
+    }
+  }
+
+  function layoutTable() {
+    const W = state.W, H = state.H;
+    // Portrait table: long vertically, player shoots from BOTTOM toward TOP cups
+    // (on pass, we flip which end is "target" by swapping visual — always shoot toward top)
+    const padX = Math.max(12, W * 0.06);
+    const padY = Math.max(10, H * 0.04);
+    const tw = W - padX * 2;
+    const th = H - padY * 2;
+    state.table = { x: padX, y: padY, w: tw, h: th };
+  }
+
+  // Triangle rack: row counts 4,3,2,1 pointing toward mid-table (apex toward center)
+  // For target at TOP: base near top edge, apex lower (toward shooter)
+  // For own cups at BOTTOM: base near bottom, apex higher
+  function cupPositions(end /* 'top' | 'bottom' */) {
+    const t = state.table;
+    const cupR = Math.min(t.w, t.h) * 0.048;
+    const gap = cupR * 2.15;
+    const rows = [4, 3, 2, 1];
+    const positions = [];
+    const rackDepth = (rows.length - 1) * gap * 0.9;
+    const startY = end === 'top'
+      ? t.y + cupR * 1.6
+      : t.y + t.h - cupR * 1.6 - rackDepth;
+
+    for (let r = 0; r < rows.length; r++) {
+      const n = rows[r];
+      const rowW = (n - 1) * gap;
+      const y = end === 'top'
+        ? startY + r * gap * 0.9
+        : startY + r * gap * 0.9;
+      for (let i = 0; i < n; i++) {
+        const x = t.x + t.w / 2 - rowW / 2 + i * gap;
+        positions.push({ x, y, r: cupR });
+      }
+    }
+    return positions;
+  }
+
+  function initCups() {
+    const top = cupPositions('top');
+    const bot = cupPositions('bottom');
+    // cups[0] = player0's cups (defended at bottom when they shoot? Actually:
+    // Player shoots at OPPONENT cups. We always draw target at TOP and shooter's cups at BOTTOM.
+    // So cups[turn] shown at bottom, cups[1-turn] at top — we remap each turn.
+    // Store by owner: cups[i] belongs to player i (opponent aims at these).
+    state.cups[0] = bot.map(p => ({ ...p, alive: true, owner: 0 }));
+    state.cups[1] = top.map(p => ({ ...p, alive: true, owner: 1 }));
+    // Initial: turn 0 shoots at player1's cups (top). Player0 cups at bottom.
+    syncCupLayout();
+  }
+
+  function rebuildCupPositions() {
+    // Preserve alive flags, recompute x,y,r for current orientation
+    syncCupLayout();
+  }
+
+  function syncCupLayout() {
+    // Always: opponent cups at TOP (target), own cups at BOTTOM
+    const shooter = state.turn;
+    const target = 1 - shooter;
+    const topPos = cupPositions('top');
+    const botPos = cupPositions('bottom');
+    // Map remaining alive cups into positions — keep relative triangle order by index
+    placeAlive(state.cups[target], topPos);
+    placeAlive(state.cups[shooter], botPos);
+  }
+
+  function placeAlive(cupArr, positions) {
+    // Place living cups into first N positions of a fresh triangle for their count (auto re-rack visual optional)
+    // For standard play we keep original slots; re-rack button packs them.
+    const r = positions[0] ? positions[0].r : 12;
+    for (let i = 0; i < cupArr.length; i++) {
+      if (i < positions.length) {
+        cupArr[i].x = positions[i].x;
+        cupArr[i].y = positions[i].y;
+        cupArr[i].r = r;
+      }
+    }
+  }
+
+  function living(cups) {
+    return cups.filter(c => c.alive);
+  }
+
+  function countAlive(i) {
+    return state.cups[i].filter(c => c.alive).length;
+  }
+
+  // Re-rack: pack living cups into a compact triangle at that end
+  function rerackFor(owner, end) {
+    const alive = living(state.cups[owner]);
+    const n = alive.length;
+    if (n === 0) return;
+    // Build compact rows for n cups
+    const rows = packRows(n);
+    const t = state.table;
+    const cupR = Math.min(t.w, t.h) * 0.048;
+    const gap = cupR * 2.15;
+    const rackDepth = (rows.length - 1) * gap * 0.9;
+    const startY = end === 'top'
+      ? t.y + cupR * 1.6
+      : t.y + t.h - cupR * 1.6 - rackDepth;
+    let idx = 0;
+    for (let r = 0; r < rows.length; r++) {
+      const count = rows[r];
+      const rowW = (count - 1) * gap;
+      const y = startY + r * gap * 0.9;
+      for (let i = 0; i < count; i++) {
+        const x = t.x + t.w / 2 - rowW / 2 + i * gap;
+        alive[idx].x = x;
+        alive[idx].y = y;
+        alive[idx].r = cupR;
+        idx++;
+      }
+    }
+  }
+
+  function packRows(n) {
+    // Prefer classic shapes: 10→4-3-2-1, 6→3-2-1, 3→2-1, 1→1, else fill rows top-heavy
+    if (n === 10) return [4, 3, 2, 1];
+    if (n === 6) return [3, 2, 1];
+    if (n === 4) return [3, 1];
+    if (n === 3) return [2, 1];
+    if (n === 2) return [2];
+    if (n === 1) return [1];
+    // Generic: fill rows of up to 4
+    const rows = [];
+    let left = n;
+    while (left > 0) {
+      const take = Math.min(4, left);
+      rows.push(take);
+      left -= take;
+    }
+    return rows;
+  }
+
+  function doRerack() {
+    if (state.phase !== 'idle' && state.phase !== 'pass') return;
+    const shooter = state.turn;
+    const target = 1 - shooter;
+    rerackFor(target, 'top');
+    rerackFor(shooter, 'bottom');
+    setFeedback('Re-racked!', 'sink');
+  }
+
+  // ——— Game flow ———
+  function startGame() {
+    const n1 = (document.getElementById('name1').value || 'Sean').trim().slice(0, 16);
+    const n2 = (document.getElementById('name2').value || 'Guest').trim().slice(0, 16);
+    state.names = [n1 || 'Sean', n2 || 'Guest'];
+    state.turn = 0;
+    state.phase = 'idle';
+    state.ball = null;
+    state.particles = [];
+    state.firstTurn = true;
+    showScreen(gameScreen);
+    resize();
+    initCups();
+    updateHUD();
+    // First player: no pass needed, just play
+    passOverlay.classList.remove('show');
+    setFeedback('Drag back & release!', 'sink');
+    aimHint.textContent = 'Drag back to aim · release to throw';
+  }
+
+  function updateHUD() {
+    document.getElementById('hudName0').textContent = state.names[0];
+    document.getElementById('hudName1').textContent = state.names[1];
+    document.getElementById('hudCups0').innerHTML = countAlive(0) + ' <span>cups</span>';
+    document.getElementById('hudCups1').innerHTML = countAlive(1) + ' <span>cups</span>';
+    document.getElementById('pill0').classList.toggle('active', state.turn === 0 && state.phase !== 'over');
+    document.getElementById('pill1').classList.toggle('active', state.turn === 1 && state.phase !== 'over');
+    const shooter = state.names[state.turn];
+    const target = state.names[1 - state.turn];
+    turnBanner.textContent = shooter + "'s turn — aim at " + target + "'s cups";
+  }
+
+  function setFeedback(msg, kind) {
+    feedbackEl.textContent = msg;
+    feedbackEl.className = kind || '';
+    state.feedbackTimer = 2.2;
+  }
+
+  function endThrow(hit) {
+    state.lastThrowHit = hit;
+    state.ball = null;
+    state.phase = 'settle';
+
+    const target = 1 - state.turn;
+    if (countAlive(target) === 0) {
+      // Win
+      setTimeout(() => {
+        state.phase = 'over';
+        document.getElementById('winnerName').textContent = state.names[state.turn];
+        showScreen(endScreen);
+      }, 700);
+      return;
+    }
+
+    // Next turn after brief pause
+    setTimeout(() => {
+      state.turn = 1 - state.turn;
+      syncCupLayout();
+      updateHUD();
+      state.phase = 'pass';
+      showPass();
+    }, hit ? 900 : 650);
+  }
+
+  function showPass() {
+    const name = state.names[state.turn];
+    document.getElementById('passTitle').textContent = 'Pass to ' + name;
+    document.getElementById('passMsg').textContent =
+      'Hand the phone to ' + name + '. Tap when ready to shoot at ' +
+      state.names[1 - state.turn] + "'s cups.";
+    passOverlay.classList.add('show');
+    aimHint.textContent = '';
+  }
+
+  function dismissPass() {
+    passOverlay.classList.remove('show');
+    state.phase = 'idle';
+    state.ball = null;
+    updateHUD();
+    setFeedback('Your shot — drag & release', 'sink');
+    aimHint.textContent = 'Drag back to aim · release to throw';
+  }
+
+  // ——— Input (touch + mouse) ———
+  function canvasPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    let clientX, clientY;
+    if (e.touches && e.touches.length) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else if (e.changedTouches && e.changedTouches.length) {
+      clientX = e.changedTouches[0].clientX;
+      clientY = e.changedTouches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+    return { x: clientX - rect.left, y: clientY - rect.top };
+  }
+
+  function onPointerDown(e) {
+    if (state.phase !== 'idle') return;
+    if (passOverlay.classList.contains('show')) return;
+    e.preventDefault();
+    const p = canvasPos(e);
+    // Must start drag in lower portion (shooting zone)
+    if (p.y < state.H * 0.45) return;
+    state.aim.active = true;
+    state.aim.sx = p.x;
+    state.aim.sy = p.y;
+    state.aim.cx = p.x;
+    state.aim.cy = p.y;
+    state.phase = 'aiming';
+    // Place ball at start
+    state.ball = {
+      x: p.x, y: p.y, vx: 0, vy: 0, r: BALL_R,
+      flying: false, trail: []
+    };
+  }
+
+  function onPointerMove(e) {
+    if (!state.aim.active || state.phase !== 'aiming') return;
+    e.preventDefault();
+    const p = canvasPos(e);
+    state.aim.cx = p.x;
+    state.aim.cy = p.y;
+    if (state.ball && !state.ball.flying) {
+      state.ball.x = state.aim.sx;
+      state.ball.y = state.aim.sy;
+    }
+  }
+
+  function onPointerUp(e) {
+    if (!state.aim.active || state.phase !== 'aiming') return;
+    e.preventDefault();
+    const p = canvasPos(e);
+    state.aim.cx = p.x;
+    state.aim.cy = p.y;
+    state.aim.active = false;
+
+    // Velocity from pull-back (slingshot): opposite of drag vector
+    const dx = state.aim.sx - state.aim.cx;
+    const dy = state.aim.sy - state.aim.cy;
+    const dist = Math.hypot(dx, dy);
+    const minPull = 18;
+    if (dist < minPull) {
+      // Cancel weak pull
+      state.ball = null;
+      state.phase = 'idle';
+      setFeedback('Pull back farther', 'miss');
+      return;
+    }
+
+    // Cap power
+    const maxPull = Math.min(state.W, state.H) * 0.42;
+    const pull = Math.min(dist, maxPull);
+    const power = (pull / maxPull) * 720; // px/s scale
+    const angle = Math.atan2(dy, dx);
+    // Prefer upward throws — boost if mostly upward
+    let vx = Math.cos(angle) * power;
+    let vy = Math.sin(angle) * power;
+    // Soft clamp so crazy side-angles still go mostly up-table
+    if (vy > -80) vy = Math.min(vy, -120) - pull * 0.8;
+
+    state.ball.vx = vx;
+    state.ball.vy = vy;
+    state.ball.flying = true;
+    state.ball.trail = [];
+    state.phase = 'flying';
+    aimHint.textContent = '';
+  }
+
+  canvas.addEventListener('touchstart', onPointerDown, { passive: false });
+  canvas.addEventListener('touchmove', onPointerMove, { passive: false });
+  canvas.addEventListener('touchend', onPointerUp, { passive: false });
+  canvas.addEventListener('touchcancel', onPointerUp, { passive: false });
+  canvas.addEventListener('mousedown', onPointerDown);
+  window.addEventListener('mousemove', onPointerMove);
+  window.addEventListener('mouseup', onPointerUp);
+
+  // Prevent pinch-zoom / gesture scroll
+  document.addEventListener('gesturestart', e => e.preventDefault());
+  document.addEventListener('gesturechange', e => e.preventDefault());
+
+  // ——— Physics ———
+  let lastTs = 0;
+  function tick(ts) {
+    const dt = Math.min(0.032, (ts - (lastTs || ts)) / 1000);
+    lastTs = ts;
+    update(dt);
+    draw();
+    requestAnimationFrame(tick);
+  }
+
+  function update(dt) {
+    if (state.feedbackTimer > 0) {
+      state.feedbackTimer -= dt;
+      if (state.feedbackTimer <= 0) feedbackEl.textContent = '';
+    }
+
+    // Particles
+    for (let i = state.particles.length - 1; i >= 0; i--) {
+      const p = state.particles[i];
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += 200 * dt;
+      p.life -= dt;
+      if (p.life <= 0) state.particles.splice(i, 1);
+    }
+
+    if (state.phase !== 'flying' || !state.ball) return;
+
+    const b = state.ball;
+    b.trail.push({ x: b.x, y: b.y });
+    if (b.trail.length > 14) b.trail.shift();
+
+    // Sub-steps for better collision
+    const steps = 4;
+    const sdt = dt / steps;
+    for (let s = 0; s < steps; s++) {
+      b.vy += G * sdt * 0.55; // gravity (tuned)
+      b.x += b.vx * sdt;
+      b.y += b.vy * sdt;
+
+      // Soft bounce on table sides
+      const t = state.table;
+      if (b.x - b.r < t.x) { b.x = t.x + b.r; b.vx *= -BOUNCE; }
+      if (b.x + b.r > t.x + t.w) { b.x = t.x + t.w - b.r; b.vx *= -BOUNCE; }
+
+      // Hit detection vs TARGET cups (top)
+      const target = 1 - state.turn;
+      for (const cup of state.cups[target]) {
+        if (!cup.alive) continue;
+        const dx = b.x - cup.x;
+        const dy = b.y - cup.y;
+        const dist = Math.hypot(dx, dy);
+        // Sink if ball center near cup opening and moving somewhat downward or slow
+        const sinkR = cup.r * 0.72;
+        if (dist < sinkR && b.y < cup.y + cup.r * 0.35) {
+          cup.alive = false;
+          spawnSplash(cup.x, cup.y);
+          setFeedback('YOU SUNK IT! 🍻', 'sink');
+          endThrow(true);
+          return;
+        }
+        // Rim bounce
+        const rimR = cup.r * 1.05;
+        if (dist < rimR + b.r && dist > sinkR) {
+          const nx = dx / (dist || 1);
+          const ny = dy / (dist || 1);
+          const vn = b.vx * nx + b.vy * ny;
+          if (vn < 0) {
+            b.vx -= 1.7 * vn * nx;
+            b.vy -= 1.7 * vn * ny;
+            b.vx *= 0.9;
+            b.vy *= 0.9;
+            b.x = cup.x + nx * (rimR + b.r + 0.5);
+            b.y = cup.y + ny * (rimR + b.r + 0.5);
+          }
+        }
+      }
+    }
+
+    // Miss: ball leaves top, or lands past mid going down slowly, or off bottom
+    const t = state.table;
+    if (b.y < t.y - 40 || b.y > state.H + 30 ||
+        (b.y > state.H * 0.55 && b.vy > 80 && Math.hypot(b.vx, b.vy) < 220)) {
+      // Floor bounce once then miss
+      if (b.y > t.y + t.h - 8 && b.vy > 0) {
+        b.y = t.y + t.h - 8;
+        b.vy *= -BOUNCE * 0.6;
+        b.vx *= FRICTION;
+        if (Math.abs(b.vy) < 60) {
+          setFeedback('Miss', 'miss');
+          endThrow(false);
+        }
+      } else if (b.y < t.y - 40 || b.y > state.H + 30) {
+        setFeedback('Miss', 'miss');
+        endThrow(false);
+      }
+    }
+
+    // Timeout safety
+    if (Math.hypot(b.vx, b.vy) < 25 && b.y > state.H * 0.4) {
+      setFeedback('Miss', 'miss');
+      endThrow(false);
+    }
+  }
+
+  function spawnSplash(x, y) {
+    for (let i = 0; i < 18; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const sp = 80 + Math.random() * 180;
+      state.particles.push({
+        x, y,
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp - 80,
+        life: 0.4 + Math.random() * 0.5,
+        color: i % 2 ? '#00e5a8' : '#ff6bb5'
+      });
+    }
+  }
+
+  // ——— Draw ———
+  function draw() {
+    const W = state.W, H = state.H;
+    if (!W || !H) return;
+    ctx.clearRect(0, 0, W, H);
+
+    // Room vibe
+    const g = ctx.createRadialGradient(W/2, H*0.3, 10, W/2, H*0.5, H*0.8);
+    g.addColorStop(0, '#1a0f30');
+    g.addColorStop(1, '#0a0612');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    if (!state.table) return;
+    drawTable();
+    drawCups(state.cups[1 - state.turn], true);  // target
+    drawCups(state.cups[state.turn], false);     // own
+
+    if (state.phase === 'aiming' && state.aim.active) drawAim();
+    if (state.ball) drawBall(state.ball);
+
+    for (const p of state.particles) {
+      ctx.globalAlpha = Math.max(0, p.life * 2);
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function drawTable() {
+    const t = state.table;
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    roundRect(t.x + 4, t.y + 6, t.w, t.h, 14);
+    ctx.fill();
+
+    // Felt
+    const felt = ctx.createLinearGradient(t.x, t.y, t.x + t.w, t.y + t.h);
+    felt.addColorStop(0, '#1f6b42');
+    felt.addColorStop(0.5, '#185734');
+    felt.addColorStop(1, '#144a2c');
+    ctx.fillStyle = felt;
+    roundRect(t.x, t.y, t.w, t.h, 14);
+    ctx.fill();
+
+    // Wood rail
+    ctx.strokeStyle = '#5c3d1e';
+    ctx.lineWidth = 6;
+    roundRect(t.x, t.y, t.w, t.h, 14);
+    ctx.stroke();
+    ctx.strokeStyle = '#8b5a2b';
+    ctx.lineWidth = 2;
+    roundRect(t.x + 3, t.y + 3, t.w - 6, t.h - 6, 12);
+    ctx.stroke();
+
+    // Center line
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 8]);
+    ctx.beginPath();
+    ctx.moveTo(t.x + 16, t.y + t.h / 2);
+    ctx.lineTo(t.x + t.w - 16, t.y + t.h / 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Labels
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.font = '700 11px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    const targetName = state.names[1 - state.turn];
+    const ownName = state.names[state.turn];
+    ctx.fillText(targetName.toUpperCase(), t.x + t.w / 2, t.y + 14);
+    ctx.fillText(ownName.toUpperCase() + ' (you)', t.x + t.w / 2, t.y + t.h - 8);
+  }
+
+  function drawCups(cups, isTarget) {
+    for (const c of cups) {
+      if (!c.alive) continue;
+      const r = c.r;
+      // Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.beginPath();
+      ctx.ellipse(c.x + 2, c.y + r * 0.55, r * 0.9, r * 0.35, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Cup body (top-down: circle with rim)
+      const body = ctx.createRadialGradient(c.x - r*0.2, c.y - r*0.2, r*0.1, c.x, c.y, r);
+      body.addColorStop(0, '#ffffff');
+      body.addColorStop(0.55, '#e8eef5');
+      body.addColorStop(1, '#b8c4d4');
+      ctx.fillStyle = body;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Beer liquid
+      const liquid = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, r * 0.72);
+      liquid.addColorStop(0, '#ffd56a');
+      liquid.addColorStop(0.7, '#e8a820');
+      liquid.addColorStop(1, '#c47a10');
+      ctx.fillStyle = liquid;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, r * 0.68, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Rim
+      ctx.strokeStyle = isTarget ? '#ff4d6d' : 'rgba(255,255,255,0.5)';
+      ctx.lineWidth = isTarget ? 3 : 2;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, r * 0.92, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Highlight
+      ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(c.x - r*0.15, c.y - r*0.2, r * 0.45, -Math.PI*0.9, -Math.PI*0.2);
+      ctx.stroke();
+    }
+  }
+
+  function drawAim() {
+    const { sx, sy, cx, cy } = state.aim;
+    const dx = sx - cx;
+    const dy = sy - cy;
+    const dist = Math.hypot(dx, dy);
+    const maxPull = Math.min(state.W, state.H) * 0.42;
+    const pull = Math.min(dist, maxPull);
+
+    // Rubber band
+    ctx.strokeStyle = 'rgba(255, 105, 180, 0.7)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(cx, cy);
+    ctx.stroke();
+
+    // Power arc / dots along predicted path
+    const power = (pull / maxPull) * 720;
+    let angle = Math.atan2(dy, dx);
+    let vx = Math.cos(angle) * power;
+    let vy = Math.sin(angle) * power;
+    if (vy > -80) vy = Math.min(vy, -120) - pull * 0.8;
+
+    let x = sx, y = sy;
+    ctx.fillStyle = 'rgba(255, 200, 87, 0.85)';
+    for (let i = 0; i < 16; i++) {
+      vy += G * 0.016 * 0.55;
+      x += vx * 0.016;
+      y += vy * 0.016;
+      const alpha = 1 - i / 16;
+      ctx.globalAlpha = alpha * 0.9;
+      ctx.beginPath();
+      ctx.arc(x, y, 3.5 - i * 0.12, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // Power bar near finger
+    const pct = pull / maxPull;
+    const bw = 64, bh = 8;
+    const bx = cx - bw / 2, by = cy + 28;
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    roundRect(bx, by, bw, bh, 4);
+    ctx.fill();
+    ctx.fillStyle = pct > 0.75 ? '#ff2d95' : pct > 0.4 ? '#ffc857' : '#00e5a8';
+    roundRect(bx, by, bw * pct, bh, 4);
+    ctx.fill();
+  }
+
+  function drawBall(b) {
+    // Trail
+    for (let i = 0; i < b.trail.length; i++) {
+      const t = b.trail[i];
+      ctx.globalAlpha = (i / b.trail.length) * 0.4;
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, b.r * (0.4 + i / b.trail.length * 0.5), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    const grd = ctx.createRadialGradient(b.x - 3, b.y - 3, 1, b.x, b.y, b.r);
+    grd.addColorStop(0, '#ffffff');
+    grd.addColorStop(0.5, '#f0f0f0');
+    grd.addColorStop(1, '#c8c8c8');
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  function roundRect(x, y, w, h, r) {
+    const rr = Math.min(r, w/2, h/2);
+    ctx.beginPath();
+    ctx.moveTo(x + rr, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rr);
+    ctx.arcTo(x + w, y + h, x, y + h, rr);
+    ctx.arcTo(x, y + h, x, y, rr);
+    ctx.arcTo(x, y, x + w, y, rr);
+    ctx.closePath();
+  }
+
+  // ——— Buttons ———
+  document.getElementById('startBtn').addEventListener('click', startGame);
+  document.getElementById('againBtn').addEventListener('click', () => {
+    showScreen(gameScreen);
+    startGame();
+  });
+  document.getElementById('homeBtn').addEventListener('click', () => showScreen(startScreen));
+  document.getElementById('menuBtn').addEventListener('click', () => {
+    if (state.phase === 'flying') return;
+    showScreen(startScreen);
+  });
+  document.getElementById('rerackBtn').addEventListener('click', doRerack);
+  document.getElementById('passReadyBtn').addEventListener('click', dismissPass);
+
+  // Enter on name fields
+  document.getElementById('name2').addEventListener('keydown', e => {
+    if (e.key === 'Enter') startGame();
+  });
+
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', () => setTimeout(resize, 200));
+
+  // Kick off render loop (start screen still fine)
+  requestAnimationFrame(tick);
+  // Initial size when game shows — also try once
+  resize();
+})();
+</script>
+</body>
+</html>
