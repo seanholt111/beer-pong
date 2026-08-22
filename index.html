@@ -461,19 +461,19 @@
   // ——— World units ———
   const TABLE_LEN = 8.0;
   const TABLE_W = 2.0;
-  const CUP_R = 0.105;           // base rim radius (near cups)
-  const CUP_R_FAR = 0.175;       // target cups — much larger
-  const CUP_HIT_R = CUP_R * 1.20;
-  const CUP_HIT_R_FAR = CUP_R_FAR * 1.28; // forgiving target rim
-  const CUP_H = 0.28;
+  const CUP_R = 0.10;            // near cups
+  const CUP_R_FAR = 0.138;       // target cups — larger, spaced so they don't overlap
+  const CUP_HIT_R = CUP_R * 1.18;
+  const CUP_HIT_R_FAR = CUP_R_FAR * 1.32; // still forgiving
+  const CUP_H = 0.32;
   const BALL_R = 0.075;
   const GRAVITY = 18.5;
 
   const CAM = {
-    eyeY: 1.55,
-    eyeZ: -1.35,
-    lookZ: 4.2,
-    fov: 0.92
+    eyeY: 1.35,
+    eyeZ: -0.85,
+    lookZ: 5.0,
+    fov: 0.78
   };
 
   // Soft magnet assist: late-flight nudge toward nearest cup if close + clean swipe
@@ -578,11 +578,10 @@
     return { sx: screenX, sy: screenY, scale, depth };
   }
 
-  // Far/target cups drawn much larger for fun + readability
+  // Mild extra scale for far cups (camera zoom does most of the "big" feel)
   function cupDrawScale(z, isFar) {
-    if (!isFar) return 1;
-    const t = Math.max(0, Math.min(1, (z - 3.2) / (TABLE_LEN - 3.2)));
-    return 1.55 + t * 0.45; // ~1.55–2.0x visual size
+    if (!isFar) return 0.92;
+    return 1.08;
   }
 
   // ——— Cup racks ———
@@ -591,11 +590,12 @@
   function rackSlots(end, nCups) {
     const rows = packRows(nCups);
     const rBase = end === 'far' ? CUP_R_FAR : CUP_R;
-    const gapX = rBase * 2.25;
-    const gapZ = rBase * 2.05;
+    // Gaps > 2*r so rims never overlap in world space
+    const gapX = rBase * 2.75;
+    const gapZ = rBase * 2.55;
     const slots = [];
-    const farZ = TABLE_LEN - 0.45;
-    const nearZ = 0.55;
+    const farZ = TABLE_LEN - 0.55;
+    const nearZ = 0.62;
 
     if (end === 'far') {
       for (let r = 0; r < rows.length; r++) {
@@ -1237,56 +1237,84 @@
   }
 
   function drawCup(cup, isFar) {
-    const drawR = (isFar ? CUP_R_FAR : CUP_R) * cupDrawScale(cup.z, isFar);
+    const worldR = isFar ? CUP_R_FAR : CUP_R;
+    const drawR = worldR * cupDrawScale(cup.z, isFar);
     const rimY = CUP_H;
     const pRim = project(cup.x, rimY, cup.z);
-    const pBase = project(cup.x, 0, cup.z);
-    const rx = Math.max(4, drawR * pRim.scale);
-    const ry = Math.max(2.5, rx * 0.38);
-    const bodyH = Math.max(6, pBase.sy - pRim.sy);
+    const pBase = project(cup.x, 0.02, cup.z);
+    const rx = Math.max(5, drawR * pRim.scale);
+    const ry = Math.max(3, rx * 0.42);
+    const baseRx = rx * 0.78;
+    const baseRy = ry * 0.78;
+    const bodyH = Math.max(8, (pBase.sy - pRim.sy) * 0.92);
 
-    // Body
-    const grad = ctx.createLinearGradient(pRim.sx - rx, pRim.sy, pRim.sx + rx, pRim.sy);
+    // Table contact shadow
+    ctx.beginPath();
+    ctx.ellipse(pBase.sx + 2, pBase.sy + 2, baseRx * 1.05, baseRy * 0.7, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.fill();
+
+    // Plastic body (trapezoid + bottom ellipse)
+    const plastic = ctx.createLinearGradient(pRim.sx - rx, pRim.sy, pRim.sx + rx, pRim.sy);
     if (isFar) {
-      grad.addColorStop(0, '#c62828');
-      grad.addColorStop(0.45, '#ef5350');
-      grad.addColorStop(1, '#8e1b1b');
+      plastic.addColorStop(0, '#f2f4f7');
+      plastic.addColorStop(0.35, '#ffffff');
+      plastic.addColorStop(0.7, '#e8ecf1');
+      plastic.addColorStop(1, '#c5ccd6');
     } else {
-      grad.addColorStop(0, '#1565c0');
-      grad.addColorStop(0.45, '#42a5f5');
-      grad.addColorStop(1, '#0d47a1');
+      plastic.addColorStop(0, '#dfe7f5');
+      plastic.addColorStop(0.5, '#f5f8ff');
+      plastic.addColorStop(1, '#b8c6de');
     }
 
     ctx.beginPath();
     ctx.moveTo(pRim.sx - rx, pRim.sy);
-    ctx.lineTo(pRim.sx - rx * 0.72, pRim.sy + bodyH);
-    ctx.ellipse(pRim.sx, pRim.sy + bodyH, rx * 0.72, ry * 0.72, 0, 0, Math.PI);
+    ctx.lineTo(pRim.sx - baseRx, pRim.sy + bodyH);
+    ctx.ellipse(pRim.sx, pRim.sy + bodyH, baseRx, baseRy, 0, Math.PI, 0, true);
     ctx.lineTo(pRim.sx + rx, pRim.sy);
     ctx.closePath();
-    ctx.fillStyle = grad;
+    ctx.fillStyle = plastic;
     ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
 
-    // Liquid
+    // Soft red band for target cups (classic solo-cup vibe without messy overlap)
+    if (isFar) {
+      const bandY = pRim.sy + bodyH * 0.38;
+      const bandRx = rx * 0.9;
+      ctx.beginPath();
+      ctx.ellipse(pRim.sx, bandY, bandRx, ry * 0.55, 0, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(220, 40, 60, 0.55)';
+      ctx.lineWidth = Math.max(2, rx * 0.14);
+      ctx.stroke();
+    }
+
+    // Beer surface inside rim
     ctx.beginPath();
-    ctx.ellipse(pRim.sx, pRim.sy + ry * 0.15, rx * 0.78, ry * 0.72, 0, 0, Math.PI * 2);
-    ctx.fillStyle = isFar ? 'rgba(255, 200, 80, 0.55)' : 'rgba(120, 200, 255, 0.45)';
+    ctx.ellipse(pRim.sx, pRim.sy + ry * 0.12, rx * 0.82, ry * 0.78, 0, 0, Math.PI * 2);
+    const beer = ctx.createRadialGradient(pRim.sx, pRim.sy, 1, pRim.sx, pRim.sy + ry, rx);
+    beer.addColorStop(0, 'rgba(255, 214, 120, 0.95)');
+    beer.addColorStop(0.65, 'rgba(232, 168, 40, 0.9)');
+    beer.addColorStop(1, 'rgba(180, 110, 20, 0.85)');
+    ctx.fillStyle = beer;
     ctx.fill();
 
-    // Rim
+    // Open rim (crisp white lip)
     ctx.beginPath();
     ctx.ellipse(pRim.sx, pRim.sy, rx, ry, 0, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = isFar ? 'rgba(255, 70, 100, 0.95)' : 'rgba(255,255,255,0.75)';
+    ctx.lineWidth = Math.max(2.5, rx * 0.11);
     ctx.stroke();
 
     ctx.beginPath();
-    ctx.ellipse(pRim.sx, pRim.sy, rx * 0.92, ry * 0.92, 0, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.ellipse(pRim.sx, pRim.sy, rx * 0.9, ry * 0.9, 0, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(0,0,0,0.18)';
     ctx.lineWidth = 1;
     ctx.stroke();
   }
 
-  function drawSwipeGhost() {
+  function drawSwipeGhost  function drawSwipeGhost() {
     // Fading swipe ghost only — NOT a dotted trajectory preview
     const g = state.swipe.ghost;
     if (!g || g.length < 2) return;
