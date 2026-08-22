@@ -204,91 +204,111 @@
 
   .player-pill {
     flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 8px 10px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
     border-radius: 12px;
-    background: rgba(255,255,255,0.05);
-    border: 2px solid transparent;
-    min-height: 56px;
-    transition: border-color 0.2s, background 0.2s;
+    padding: 8px 10px;
+    text-align: center;
+    opacity: 0.55;
+    transition: opacity 0.2s, border-color 0.2s, box-shadow 0.2s;
   }
   .player-pill.active {
-    border-color: var(--neon);
-    background: rgba(255, 45, 149, 0.12);
+    opacity: 1;
+    border-color: rgba(255, 45, 149, 0.55);
     box-shadow: 0 0 16px rgba(255, 45, 149, 0.2);
   }
   .player-pill .name {
-    font-size: 0.85rem;
     font-weight: 700;
-    max-width: 100%;
+    font-size: 0.95rem;
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
   }
   .player-pill .cups {
-    font-size: 1.35rem;
-    font-weight: 900;
+    font-size: 0.8rem;
     color: var(--accent);
-    line-height: 1.1;
+    margin-top: 2px;
   }
-  .player-pill .cups span {
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: var(--muted);
-  }
-
+  .player-pill .cups span { color: var(--muted); font-size: 0.7rem; }
   .vs {
     font-size: 0.75rem;
     font-weight: 800;
     color: var(--muted);
-    letter-spacing: 0.05em;
+    letter-spacing: 0.1em;
   }
 
   #turnBanner {
     text-align: center;
-    font-size: 0.95rem;
-    font-weight: 700;
+    font-size: 0.85rem;
     color: var(--warn);
-    min-height: 22px;
-    letter-spacing: 0.02em;
+    font-weight: 600;
+    min-height: 1.2em;
   }
 
   #feedback {
     text-align: center;
-    font-size: 1.05rem;
-    font-weight: 800;
-    min-height: 26px;
-    color: var(--accent);
-    transition: opacity 0.3s;
+    font-size: 1.35rem;
+    font-weight: 900;
+    min-height: 1.4em;
+    letter-spacing: 0.02em;
+    transition: opacity 0.2s;
   }
-  #feedback.miss { color: var(--muted); }
-  #feedback.sink { color: var(--accent); text-shadow: 0 0 12px rgba(0,229,168,0.5); }
+  #feedback.sink { color: var(--accent); text-shadow: 0 0 18px rgba(0,229,168,0.55); }
+  #feedback.rim { color: var(--warn); text-shadow: 0 0 14px rgba(255,200,87,0.45); }
+  #feedback.miss { color: #ff6b8a; text-shadow: 0 0 12px rgba(255,107,138,0.4); }
+
+  #powerWrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 4px;
+  }
+  #powerLabel {
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    width: 42px;
+  }
+  #powerBar {
+    flex: 1;
+    height: 10px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    overflow: hidden;
+  }
+  #powerFill {
+    height: 100%;
+    width: 0%;
+    border-radius: 6px;
+    background: linear-gradient(90deg, #00e5a8, #ffc857, #ff2d95);
+    transition: width 0.05s linear;
+  }
 
   #canvasWrap {
-    flex: 1 1 auto;
-    min-height: 220px;
+    flex: 1;
+    min-height: 0;
     position: relative;
-    touch-action: none;
     width: 100%;
+    overflow: hidden;
+    background: #0a0612;
   }
 
-  canvas#game {
+  #game {
     position: absolute;
     inset: 0;
+    width: 100%;
+    height: 100%;
     display: block;
-    width: 100% !important;
-    height: 100% !important;
     touch-action: none;
   }
 
   #controls {
     flex-shrink: 0;
     display: flex;
-    gap: 8px;
+    gap: 10px;
     padding: 8px 12px 12px;
-    background: linear-gradient(0deg, #12081e 0%, transparent 100%);
   }
 
   #passOverlay {
@@ -296,7 +316,9 @@
     position: absolute;
     inset: 0;
     z-index: 20;
-    background: rgba(8, 4, 16, 0.94);
+    background: rgba(8, 4, 18, 0.88);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     flex-direction: column;
     align-items: center;
     justify-content: center;
@@ -361,12 +383,12 @@
       <button class="btn btn-primary" id="startBtn" type="button">Start Game</button>
     </div>
     <div class="card howto">
-      <strong style="color:var(--text)">How to play</strong>
+      <strong style="color:var(--text)">How to throw</strong>
       <ul style="margin-top:8px">
-        <li>Drag back on the lower half — pull = power, left/right = aim</li>
-        <li>Release to throw with a real arc into the cups</li>
-        <li>Sink all 10 of your opponent's cups</li>
-        <li>Pass the phone each turn · Re-rack anytime</li>
+        <li>Start near the ball at the near end, then <strong>swipe</strong> toward the far rack</li>
+        <li>Swipe speed = power · left/right = aim · upward flick = loft</li>
+        <li>Watch the power bar — no pull-back, no dotted path</li>
+        <li>Sink all 10 of your opponent's cups · pass the phone each turn</li>
       </ul>
     </div>
   </div>
@@ -386,6 +408,10 @@
       </div>
       <div id="turnBanner">Sean's turn — aim at Guest's cups</div>
       <div id="feedback"></div>
+      <div id="powerWrap">
+        <div id="powerLabel">Power</div>
+        <div id="powerBar"><div id="powerFill"></div></div>
+      </div>
     </div>
     <div id="canvasWrap">
       <canvas id="game"></canvas>
@@ -395,7 +421,7 @@
         <button class="btn btn-primary" id="passReadyBtn" type="button">I'm ready</button>
       </div>
     </div>
-    <p class="hint" id="aimHint">Drag back to aim · release to throw</p>
+    <p class="hint" id="aimHint">Swipe from the ball toward the far cups</p>
     <div id="controls">
       <button class="btn btn-secondary btn-sm" id="rerackBtn" type="button">Re-rack</button>
       <button class="btn btn-secondary btn-sm" id="menuBtn" type="button">Menu</button>
@@ -430,22 +456,30 @@
   const feedbackEl = document.getElementById('feedback');
   const turnBanner = document.getElementById('turnBanner');
   const aimHint = document.getElementById('aimHint');
+  const powerFill = document.getElementById('powerFill');
 
-  // ——— World units (feet-ish) ———
-  // Table: length along Z, width along X. Camera at shooter end looking toward +Z.
-  const TABLE_LEN = 8.0;     // z: 0 near (shooter) → TABLE_LEN far
-  const TABLE_W = 2.0;       // x: -TABLE_W/2 … +TABLE_W/2
-  const CUP_R = 0.105;       // cup rim radius
-  const CUP_H = 0.28;        // cup height
-  const BALL_R = 0.075;      // ball radius
-  const GRAVITY = 18.5;      // world units / s^2
+  // ——— World units ———
+  const TABLE_LEN = 8.0;
+  const TABLE_W = 2.0;
+  const CUP_R = 0.105;           // drawn rim radius
+  const CUP_HIT_R = CUP_R * 1.20; // forgiving logical rim (~20% larger)
+  const CUP_H = 0.28;
+  const BALL_R = 0.075;
+  const GRAVITY = 18.5;
 
-  // Perspective camera (eye above near end, looking down table)
   const CAM = {
     eyeY: 1.55,
     eyeZ: -1.35,
     lookZ: 4.2,
     fov: 0.92
+  };
+
+  // Soft magnet assist: late-flight nudge toward nearest cup if close + clean swipe
+  const MAGNET = {
+    startT: 0.55,       // fraction of flight life when assist may kick in
+    maxDist: 0.28,      // world units from cup center to start pulling
+    strength: 2.8,      // lateral acceleration toward cup
+    cleanMin: 0.55      // swipe cleanliness threshold (0..1)
   };
 
   const state = {
@@ -454,15 +488,27 @@
     turn: 0,
     phase: 'idle', // idle | aiming | flying | settle | pass | over
     ball: null,
-    aim: { active: false, sx: 0, sy: 0, cx: 0, cy: 0, power: 0, yaw: 0 },
+    swipe: {
+      active: false,
+      samples: [],
+      sx: 0, sy: 0,
+      cx: 0, cy: 0,
+      power: 0,
+      yaw: 0,
+      loft: 0,
+      clean: 0,
+      ghost: []
+    },
     feedbackTimer: 0,
     dpr: 1,
     W: 0, H: 0,
     particles: [],
-    lastTs: 0
+    lastTs: 0,
+    fullFar: null,
+    fullNear: null
   };
 
-  // ——— Screens / resize (iOS-safe) ———
+  // ——— Screens / resize (iOS-safe: absolute fill + ResizeObserver + defer) ———
   function showScreen(el) {
     [startScreen, gameScreen, endScreen].forEach(s => s.classList.remove('active'));
     el.classList.add('active');
@@ -496,7 +542,7 @@
     canvas.style.width = '100%';
     canvas.style.height = '100%';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    if (state.cups[0].length) syncCupLayout();
+    if (state.cups[0] && state.cups[0].length) syncCupLayout();
   }
 
   function resizeWhenReady(then) {
@@ -515,17 +561,13 @@
   }
 
   // ——— 3D → screen projection ———
-  // Returns {sx, sy, scale, depth} in CSS pixels. scale ≈ apparent size factor.
   function project(x, y, z) {
     const W = state.W, H = state.H;
     const dz = z - CAM.eyeZ;
     const dy = y - CAM.eyeY;
-    // Avoid divide-by-zero behind camera
     const depth = Math.max(0.35, dz);
     const persp = 1 / (CAM.fov * depth);
-    // Horizon / vanishing toward look point
     const screenX = W * 0.5 + x * persp * W * 0.72;
-    // Map world Y up → screen Y down; table surface drifts upward as z increases
     const tableBase = H * 0.88;
     const vanishLift = (z / TABLE_LEN) * H * 0.52;
     const heightLift = dy * persp * H * 0.55;
@@ -534,38 +576,39 @@
     return { sx: screenX, sy: screenY, scale, depth };
   }
 
+  // Far cups drawn ~18% larger for readability / hit feel
+  function cupDrawScale(z) {
+    const t = Math.max(0, Math.min(1, (z - 3.5) / (TABLE_LEN - 3.5)));
+    return 1 + t * 0.18;
+  }
+
   // ——— Cup racks ———
-  // Opponent (far): rows 4-3-2-1 with row of 4 at FAR end, apex toward mid-table
-  // Own (near):     rows 4-3-2-1 with row of 4 at NEAR end, apex toward mid-table
-  function rackSlots(end /* 'far' | 'near' */, nCups) {
+  // Far rack: base-4 at far end, apex toward mid
+  // Near rack: base-4 at near end, apex toward mid
+  function rackSlots(end, nCups) {
     const rows = packRows(nCups);
     const gapX = CUP_R * 2.35;
     const gapZ = CUP_R * 2.15;
     const slots = [];
     const farZ = TABLE_LEN - 0.35;
     const nearZ = 0.55;
-    const midBias = 0.15;
 
     if (end === 'far') {
-      // row 0 (4 cups) at farZ; subsequent rows decrease z (toward shooter / mid)
       for (let r = 0; r < rows.length; r++) {
         const count = rows[r];
         const z = farZ - r * gapZ;
         const rowW = (count - 1) * gapX;
         for (let i = 0; i < count; i++) {
-          const x = -rowW / 2 + i * gapX;
-          slots.push({ x, z: z - midBias * 0 });
+          slots.push({ x: -rowW / 2 + i * gapX, z });
         }
       }
     } else {
-      // row 0 (4 cups) at nearZ; subsequent rows increase z (toward mid / opponent)
       for (let r = 0; r < rows.length; r++) {
         const count = rows[r];
         const z = nearZ + r * gapZ;
         const rowW = (count - 1) * gapX;
         for (let i = 0; i < count; i++) {
-          const x = -rowW / 2 + i * gapX;
-          slots.push({ x, z });
+          slots.push({ x: -rowW / 2 + i * gapX, z });
         }
       }
     }
@@ -595,20 +638,16 @@
   }
 
   function initCups() {
-    // Full 10-cup triangles; dead cups keep slots until Re-rack packs them
     const far = rackSlots('far', 10);
     const near = rackSlots('near', 10);
     state.cups[0] = near.map((p, i) => ({ x: p.x, z: p.z, alive: true, owner: 0, idx: i, slot: i }));
     state.cups[1] = far.map((p, i) => ({ x: p.x, z: p.z, alive: true, owner: 1, idx: i, slot: i }));
-    // Remember canonical full-rack slots per end for hole-preserving layout
     state.fullFar = far;
     state.fullNear = near;
     syncCupLayout();
   }
 
   function syncCupLayout() {
-    // Always: opponent at FAR, own at NEAR (camera from shooter's end)
-    // Preserve holes: map each cup back to its slot index in the full 10-triangle
     const shooter = state.turn;
     const target = 1 - shooter;
     applyFullSlots(state.cups[target], state.fullFar || rackSlots('far', 10));
@@ -625,7 +664,6 @@
     }
   }
 
-
   function living(cups) { return cups.filter(c => c.alive); }
   function countAlive(i) { return state.cups[i].filter(c => c.alive).length; }
 
@@ -633,7 +671,6 @@
     if (state.phase !== 'idle' && state.phase !== 'pass') return;
     const shooter = state.turn;
     const target = 1 - shooter;
-    // Pack living cups into compact triangles; rewrite slot indices + canonical templates
     packOwner(target, 'far');
     packOwner(shooter, 'near');
     setFeedback('Re-racked!', 'sink');
@@ -642,10 +679,7 @@
   function packOwner(owner, end) {
     const alive = state.cups[owner].filter(c => c.alive);
     const dead = state.cups[owner].filter(c => !c.alive);
-    const n = Math.max(alive.length, 1);
     const packed = rackSlots(end, alive.length || 1);
-    // Canonical template stays size 10 so turn-flip applyFullSlots is stable;
-    // living cups occupy 0..n-1 of a fresh packed layout stored on the cups themselves.
     alive.forEach((c, i) => {
       c.slot = i;
       if (i < packed.length) {
@@ -655,7 +689,6 @@
     });
     dead.forEach((c, i) => { c.slot = alive.length + i; });
     state.cups[owner] = alive.concat(dead);
-    // Store packed slots padded to 10 so syncCupLayout preserves the packed shape
     const pad = rackSlots(end, 10);
     for (let i = 0; i < packed.length && i < pad.length; i++) pad[i] = packed[i];
     if (end === 'far') state.fullFar = pad;
@@ -671,9 +704,12 @@
     state.phase = 'idle';
     state.ball = null;
     state.particles = [];
+    state.swipe.active = false;
+    state.swipe.ghost = [];
     passOverlay.classList.remove('show');
-    setFeedback('Drag back & release!', 'sink');
-    aimHint.textContent = 'Drag back to aim · release to throw';
+    setPowerBar(0);
+    setFeedback('Swipe to throw!', 'sink');
+    aimHint.textContent = 'Swipe from the ball toward the far cups';
     resizeWhenReady(() => {
       initCups();
       updateHUD();
@@ -698,293 +734,457 @@
     state.feedbackTimer = 2.2;
   }
 
-  function endThrow(hit) {
-    state.ball = null;
-    state.phase = 'settle';
-    const target = 1 - state.turn;
-    if (countAlive(target) === 0) {
-      setTimeout(() => {
-        state.phase = 'over';
-        document.getElementById('winnerName').textContent = state.names[state.turn];
-        showScreen(endScreen);
-      }, 700);
+  function setPowerBar(p) {
+    const pct = Math.max(0, Math.min(1, p)) * 100;
+    powerFill.style.width = pct.toFixed(1) + '%';
+  }
+
+  function endTurnAfterShot(sunk) {
+    if (countAlive(1 - state.turn) <= 0) {
+      state.phase = 'over';
+      document.getElementById('winnerName').textContent = state.names[state.turn];
+      setTimeout(() => showScreen(endScreen), 700);
       return;
     }
-    setTimeout(() => {
-      state.turn = 1 - state.turn;
-      syncCupLayout();
-      updateHUD();
-      state.phase = 'pass';
-      showPass();
-    }, hit ? 950 : 700);
-  }
-
-  function showPass() {
-    const name = state.names[state.turn];
-    document.getElementById('passTitle').textContent = 'Pass to ' + name;
-    document.getElementById('passMsg').textContent =
-      'Hand the phone to ' + name + '. Tap when ready to shoot at ' +
-      state.names[1 - state.turn] + "'s cups.";
+    // Always pass phone after a shot
+    state.phase = 'pass';
+    const next = 1 - state.turn;
+    document.getElementById('passTitle').textContent = 'Pass to ' + state.names[next];
+    document.getElementById('passMsg').textContent = sunk
+      ? 'Nice sink! Hand the phone to ' + state.names[next] + '.'
+      : 'Hand the phone to ' + state.names[next] + '. Tap when ready.';
     passOverlay.classList.add('show');
-    aimHint.textContent = '';
   }
 
-  function dismissPass() {
+  function acceptPass() {
     passOverlay.classList.remove('show');
+    state.turn = 1 - state.turn;
     state.phase = 'idle';
     state.ball = null;
+    state.swipe.active = false;
+    state.swipe.ghost = [];
+    setPowerBar(0);
+    syncCupLayout();
     updateHUD();
-    setFeedback('Your shot — drag & release', 'sink');
-    aimHint.textContent = 'Drag back to aim · release to throw';
+    setFeedback('Swipe to throw!', 'sink');
   }
 
-  // ——— Aiming / throw ———
-  // Shoot origin in world
-  function throwOrigin() {
-    return { x: 0, y: 0.35, z: 0.08 };
+  // ——— Swipe throw (NO pull-back / NO trajectory dots) ———
+  function ballRestScreen() {
+    // Resting ball near shooter end, center
+    return project(0, BALL_R, 0.22);
   }
 
-  function aimFromDrag() {
-    const dx = state.aim.sx - state.aim.cx; // pull right → aim right (yaw+)
-    const dy = state.aim.cy - state.aim.sy; // pull down (back) → power+
-    const pullY = Math.max(0, dy);
-    const maxPull = Math.min(state.W, state.H) * 0.38;
-    const power = Math.min(1, pullY / maxPull);
-    // Max yaw ~0.14 rad ≈ outer cups at far rack (full left/right drag)
-    const yaw = Math.max(-0.14, Math.min(0.14, (dx / maxPull) * 0.14));
-    return { power, yaw, pullY, maxPull };
-  }
-
-  function launchVel(power, yaw) {
-    // Tuned: ~0.45–0.65 power sinks into far rack; low short, high long
-    const speed = 3.2 + power * 4.5;
-    const loft = 7.2 + power * 3.2;
-    const vz = Math.cos(yaw) * speed;
-    const vx = Math.sin(yaw) * speed;
-    return { vx, vy: loft, vz };
-  }
-
-  function sampleTrajectory(power, yaw, steps) {
-    const o = throwOrigin();
-    const v = launchVel(power, yaw);
-    const pts = [];
-    let x = o.x, y = o.y, z = o.z;
-    let vx = v.vx, vy = v.vy, vz = v.vz;
-    const dt = 0.045;
-    for (let i = 0; i < steps; i++) {
-      vy -= GRAVITY * dt;
-      x += vx * dt;
-      y += vy * dt;
-      z += vz * dt;
-      if (y < BALL_R) {
-        y = BALL_R;
-        pts.push({ x, y, z });
-        break;
-      }
-      if (z > TABLE_LEN + 1.5 || z < -1) break;
-      pts.push({ x, y, z });
-    }
-    return pts;
-  }
-
-  // ——— Input ———
-  function canvasPos(e) {
+  function pointerPos(e) {
     const rect = canvas.getBoundingClientRect();
-    let clientX, clientY;
-    if (e.touches && e.touches.length) {
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-    } else if (e.changedTouches && e.changedTouches.length) {
-      clientX = e.changedTouches[0].clientX;
-      clientY = e.changedTouches[0].clientY;
-    } else {
-      clientX = e.clientX;
-      clientY = e.clientY;
-    }
-    return { x: clientX - rect.left, y: clientY - rect.top };
+    const t = e.touches && e.touches[0] ? e.touches[0] : (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0] : e);
+    return { x: t.clientX - rect.left, y: t.clientY - rect.top, t: performance.now() };
+  }
+
+  function nearBallStart(x, y) {
+    const b = ballRestScreen();
+    const dx = x - b.sx;
+    const dy = y - b.sy;
+    const r = Math.max(48, 56 * (state.W / 360));
+    // Also allow start in lower ~42% of canvas (near end)
+    const inLower = y > state.H * 0.55;
+    return (dx * dx + dy * dy < r * r) || inLower;
   }
 
   function onPointerDown(e) {
     if (state.phase !== 'idle') return;
     if (passOverlay.classList.contains('show')) return;
     e.preventDefault();
-    const p = canvasPos(e);
-    if (p.y < state.H * 0.42) return; // lower portion only
-    state.aim.active = true;
-    state.aim.sx = p.x;
-    state.aim.sy = p.y;
-    state.aim.cx = p.x;
-    state.aim.cy = p.y;
+    const p = pointerPos(e);
+    if (!nearBallStart(p.x, p.y)) {
+      setFeedback('Start near the ball', 'miss');
+      return;
+    }
     state.phase = 'aiming';
-    const o = throwOrigin();
-    state.ball = { x: o.x, y: o.y, z: o.z, vx: 0, vy: 0, vz: 0, flying: false, trail: [] };
+    state.swipe.active = true;
+    state.swipe.samples = [{ x: p.x, y: p.y, t: p.t }];
+    state.swipe.sx = p.x;
+    state.swipe.sy = p.y;
+    state.swipe.cx = p.x;
+    state.swipe.cy = p.y;
+    state.swipe.power = 0;
+    state.swipe.yaw = 0;
+    state.swipe.loft = 0;
+    state.swipe.clean = 0;
+    state.swipe.ghost = [{ x: p.x, y: p.y, a: 1 }];
+    setPowerBar(0);
   }
 
   function onPointerMove(e) {
-    if (!state.aim.active || state.phase !== 'aiming') return;
+    if (!state.swipe.active || state.phase !== 'aiming') return;
     e.preventDefault();
-    const p = canvasPos(e);
-    state.aim.cx = p.x;
-    state.aim.cy = p.y;
-    const a = aimFromDrag();
-    state.aim.power = a.power;
-    state.aim.yaw = a.yaw;
+    const p = pointerPos(e);
+    state.swipe.cx = p.x;
+    state.swipe.cy = p.y;
+    state.swipe.samples.push({ x: p.x, y: p.y, t: p.t });
+    // Keep last ~180ms of samples for velocity
+    const cut = p.t - 180;
+    while (state.swipe.samples.length > 2 && state.swipe.samples[0].t < cut) {
+      state.swipe.samples.shift();
+    }
+    // Ghost trail (fading swipe path only — not a trajectory preview)
+    state.swipe.ghost.push({ x: p.x, y: p.y, a: 1 });
+    if (state.swipe.ghost.length > 28) state.swipe.ghost.shift();
+    for (let i = 0; i < state.swipe.ghost.length; i++) {
+      state.swipe.ghost[i].a *= 0.92;
+    }
+
+    const live = estimateSwipe();
+    state.swipe.power = live.power;
+    state.swipe.yaw = live.yaw;
+    state.swipe.loft = live.loft;
+    state.swipe.clean = live.clean;
+    setPowerBar(live.power);
   }
 
   function onPointerUp(e) {
-    if (!state.aim.active || state.phase !== 'aiming') return;
+    if (!state.swipe.active || state.phase !== 'aiming') return;
     e.preventDefault();
-    const p = canvasPos(e);
-    state.aim.cx = p.x;
-    state.aim.cy = p.y;
-    state.aim.active = false;
-    const a = aimFromDrag();
-    if (a.power < 0.12) {
-      state.ball = null;
+    const p = pointerPos(e);
+    state.swipe.samples.push({ x: p.x, y: p.y, t: p.t });
+    const live = estimateSwipe();
+    state.swipe.active = false;
+    setPowerBar(live.power);
+
+    // Require a real forward swipe toward far rack (up on screen)
+    const dyTotal = state.swipe.sy - p.y; // positive = upward swipe (toward far)
+    if (live.power < 0.12 || dyTotal < 18) {
       state.phase = 'idle';
-      setFeedback('Pull back farther', 'miss');
+      state.swipe.ghost = [];
+      setPowerBar(0);
+      setFeedback('Swipe toward far cups', 'miss');
       return;
     }
-    const v = launchVel(a.power, a.yaw);
-    const o = throwOrigin();
-    state.ball = {
-      x: o.x, y: o.y, z: o.z,
-      vx: v.vx, vy: v.vy, vz: v.vz,
-      flying: true, trail: [], sunk: false
-    };
-    state.phase = 'flying';
-    aimHint.textContent = '';
+    launchBall(live);
   }
 
-  canvas.addEventListener('touchstart', onPointerDown, { passive: false });
-  canvas.addEventListener('touchmove', onPointerMove, { passive: false });
-  canvas.addEventListener('touchend', onPointerUp, { passive: false });
-  canvas.addEventListener('touchcancel', onPointerUp, { passive: false });
-  canvas.addEventListener('mousedown', onPointerDown);
-  window.addEventListener('mousemove', onPointerMove);
-  window.addEventListener('mouseup', onPointerUp);
+  function onPointerCancel() {
+    if (!state.swipe.active) return;
+    state.swipe.active = false;
+    state.swipe.ghost = [];
+    state.phase = 'idle';
+    setPowerBar(0);
+  }
 
-  // ——— Physics / sink ———
+  function estimateSwipe() {
+    const samples = state.swipe.samples;
+    if (samples.length < 2) {
+      return { power: 0, yaw: 0, loft: 0, clean: 0, vx: 0, vy: 0 };
+    }
+    // Velocity from recent samples (screen px/ms)
+    const a = samples[0];
+    const b = samples[samples.length - 1];
+    const dt = Math.max(8, b.t - a.t);
+    const vx = (b.x - a.x) / dt; // +right
+    const vy = (a.y - b.y) / dt; // +up (toward far rack)
+
+    // Speed-based power (no pull-back)
+    const speed = Math.sqrt(vx * vx + vy * vy);
+    // ~0.55–1.4 px/ms feels strong on phones
+    let power = Math.min(1, Math.max(0, (speed - 0.12) / 1.05));
+
+    // Direction = aim (yaw from lateral vs forward)
+    const yaw = Math.atan2(vx, Math.max(0.05, vy)); // rad, 0 = straight up
+
+    // Upward flick = loft: extra vertical from how steep the swipe is
+    const loft = Math.min(1, Math.max(0, (vy - Math.abs(vx) * 0.35) / 1.2));
+
+    // Cleanliness: mostly forward, steady direction, enough length
+    const totalDx = b.x - state.swipe.sx;
+    const totalDy = state.swipe.sy - b.y;
+    const pathLen = Math.sqrt(totalDx * totalDx + totalDy * totalDy);
+    let dirVar = 0;
+    if (samples.length >= 4) {
+      let sumAng = 0, n = 0;
+      for (let i = 1; i < samples.length; i++) {
+        const dx = samples[i].x - samples[i - 1].x;
+        const dy = samples[i - 1].y - samples[i].y;
+        if (dx * dx + dy * dy < 4) continue;
+        sumAng += Math.atan2(dx, Math.max(0.01, dy));
+        n++;
+      }
+      const mean = n ? sumAng / n : 0;
+      let varSum = 0;
+      n = 0;
+      for (let i = 1; i < samples.length; i++) {
+        const dx = samples[i].x - samples[i - 1].x;
+        const dy = samples[i - 1].y - samples[i].y;
+        if (dx * dx + dy * dy < 4) continue;
+        const ang = Math.atan2(dx, Math.max(0.01, dy));
+        let d = ang - mean;
+        while (d > Math.PI) d -= Math.PI * 2;
+        while (d < -Math.PI) d += Math.PI * 2;
+        varSum += d * d;
+        n++;
+      }
+      dirVar = n ? Math.sqrt(varSum / n) : 1;
+    }
+    const forwardBias = Math.max(0, totalDy) / Math.max(1, pathLen);
+    const steady = Math.max(0, 1 - dirVar / 0.85);
+    const clean = Math.max(0, Math.min(1, forwardBias * 0.55 + steady * 0.35 + (pathLen > 40 ? 0.1 : 0)));
+
+    // Soft clamp extreme yaw
+    const yawClamped = Math.max(-0.72, Math.min(0.72, yaw));
+
+    return { power, yaw: yawClamped, loft, clean, vx, vy };
+  }
+
+  function launchBall(swipe) {
+    // Map swipe → 3D velocity toward far rack
+    const power = swipe.power;
+    const yaw = swipe.yaw;
+    const loft = swipe.loft;
+
+    // Base speed tuned so mid power reaches far rack; high power can go long
+    const speed = 4.2 + power * 7.8; // horizontal-ish forward speed
+    const vz = Math.cos(yaw) * speed;
+    const vx = Math.sin(yaw) * speed * 1.05;
+    // Vertical: base arc + loft from upward flick
+    const vy = 3.2 + power * 4.8 + loft * 3.6;
+
+    state.ball = {
+      x: 0,
+      y: BALL_R + 0.02,
+      z: 0.22,
+      vx, vy, vz,
+      alive: true,
+      age: 0,
+      life: 0,
+      maxLife: 2.8,
+      clean: swipe.clean,
+      magnetUsed: false,
+      settled: false,
+      result: null
+    };
+    state.phase = 'flying';
+    state.swipe.ghost = state.swipe.ghost.slice(-12); // brief fade after release
+  }
+
+  // ——— Flight / collision / magnet assist ———
   function updateBall(dt) {
     const b = state.ball;
-    if (!b || !b.flying) return;
+    if (!b || !b.alive) return;
 
-    b.trail.push({ x: b.x, y: b.y, z: b.z });
-    if (b.trail.length > 18) b.trail.shift();
+    b.age += dt;
+    b.life = b.age / b.maxLife;
+
+    // Soft magnet assist late in flight if landing near a cup and swipe was clean
+    if (b.life >= MAGNET.startT && b.clean >= MAGNET.cleanMin && b.y > CUP_H * 0.35) {
+      const targetCups = living(state.cups[1 - state.turn]);
+      let best = null;
+      let bestD = Infinity;
+      for (let i = 0; i < targetCups.length; i++) {
+        const c = targetCups[i];
+        const dx = c.x - b.x;
+        const dz = c.z - b.z;
+        const d = Math.sqrt(dx * dx + dz * dz);
+        if (d < bestD) { bestD = d; best = c; }
+      }
+      if (best && bestD < MAGNET.maxDist && bestD > 0.001) {
+        // Pull strength scales with closeness + cleanliness (fair "almost" sinks)
+        const prox = 1 - bestD / MAGNET.maxDist;
+        const force = MAGNET.strength * prox * prox * b.clean;
+        const dx = best.x - b.x;
+        const dz = best.z - b.z;
+        b.vx += (dx / bestD) * force * dt;
+        b.vz += (dz / bestD) * force * dt;
+        b.magnetUsed = true;
+      }
+    }
 
     b.vy -= GRAVITY * dt;
     b.x += b.vx * dt;
     b.y += b.vy * dt;
     b.z += b.vz * dt;
 
-    // Sink: over a rim while dropping through the cup mouth (not just 2D overlap)
-    if (!b.sunk && b.vy < 1.5 && b.y <= CUP_H + BALL_R * 0.35 && b.y >= BALL_R * 0.25) {
-      const target = 1 - state.turn;
-      const hit = checkSink(b, state.cups[target]);
-      if (hit) {
-        b.sunk = true;
-        hit.alive = false;
-        spawnSplash(hit.x, CUP_H * 0.7, hit.z);
-        setFeedback('SINK! 🍻', 'sink');
-        updateHUD();
-        b.x = hit.x; b.z = hit.z;
-        b.vx *= 0.08; b.vz *= 0.08;
-        b.vy = Math.min(b.vy, -1.5);
-        setTimeout(() => endThrow(true), 420);
-        return;
-      }
-    }
-
-    // Table bounce / miss
-    if (b.y <= BALL_R) {
+    // Table bounce (soft) before rim height check
+    if (b.y < BALL_R && b.z > 0 && b.z < TABLE_LEN) {
       b.y = BALL_R;
-      if (Math.abs(b.vy) < 2.2) {
-        // Came to rest — miss
-        setFeedback('Miss', 'miss');
-        endThrow(false);
+      if (b.vy < 0) b.vy *= -0.28;
+      b.vx *= 0.82;
+      b.vz *= 0.82;
+      if (Math.abs(b.vy) < 0.8) {
+        resolveLanding(b);
         return;
       }
-      b.vy = -b.vy * 0.38;
-      b.vx *= 0.78;
-      b.vz *= 0.78;
     }
 
-    // Out of bounds
-    if (b.z > TABLE_LEN + 2.2 || b.z < -1.5 || Math.abs(b.x) > TABLE_W * 1.6) {
-      setFeedback('Miss', 'miss');
-      endThrow(false);
+    // Cup hit test while descending near rim height
+    if (b.vy <= 0 && b.y <= CUP_H + BALL_R * 1.2 && b.y >= CUP_H * 0.35) {
+      const hit = testCupHit(b);
+      if (hit) {
+        sinkCup(hit.cup);
+        b.alive = false;
+        b.result = 'sink';
+        spawnSplash(hit.cup.x, CUP_H, hit.cup.z);
+        setFeedback(b.magnetUsed ? 'Sink! (assist)' : 'SINK!', 'sink');
+        state.phase = 'settle';
+        setTimeout(() => {
+          state.ball = null;
+          setPowerBar(0);
+          endTurnAfterShot(true);
+        }, 650);
+        return;
+      }
+    }
+
+    // Out of play
+    if (b.y < -0.5 || b.z > TABLE_LEN + 1.5 || b.z < -1.2 || Math.abs(b.x) > TABLE_W * 1.4 || b.age > b.maxLife) {
+      resolveLanding(b);
     }
   }
 
-  function checkSink(ball, cups) {
-    // Ball center projected on table must be inside rim ellipse (circle in xz),
-    // and height must be landing into cup (already gated by caller).
-    const rim = CUP_R * 0.98;
+  function testCupHit(b) {
+    const targetCups = living(state.cups[1 - state.turn]);
     let best = null;
     let bestD = Infinity;
-    for (const c of cups) {
-      if (!c.alive) continue;
-      const dx = ball.x - c.x;
-      const dz = ball.z - c.z;
-      const d = Math.hypot(dx, dz);
-      if (d < rim && d < bestD) {
-        bestD = d;
-        best = c;
-      }
+    for (let i = 0; i < targetCups.length; i++) {
+      const c = targetCups[i];
+      const dx = b.x - c.x;
+      const dz = b.z - c.z;
+      const d = Math.sqrt(dx * dx + dz * dz);
+      if (d < bestD) { bestD = d; best = c; }
     }
-    return best;
+    if (!best) return null;
+    // Forgiving logical rim ~20% larger than drawn
+    if (bestD <= CUP_HIT_R) return { cup: best, dist: bestD };
+    // Rim scrape: close but outside hit radius
+    if (bestD <= CUP_HIT_R * 1.22) return { cup: best, dist: bestD, rim: true };
+    return null;
+  }
+
+  function resolveLanding(b) {
+    if (b.settled) return;
+    b.settled = true;
+    b.alive = false;
+
+    const targetCups = living(state.cups[1 - state.turn]);
+    let nearCup = null;
+    let nearD = Infinity;
+    for (let i = 0; i < targetCups.length; i++) {
+      const c = targetCups[i];
+      const dx = b.x - c.x;
+      const dz = b.z - c.z;
+      const d = Math.sqrt(dx * dx + dz * dz);
+      if (d < nearD) { nearD = d; nearCup = c; }
+    }
+
+    // Late rim check at table height
+    if (nearCup && nearD <= CUP_HIT_R && b.y <= CUP_H + BALL_R * 1.5) {
+      sinkCup(nearCup);
+      b.result = 'sink';
+      spawnSplash(nearCup.x, CUP_H, nearCup.z);
+      setFeedback(b.magnetUsed ? 'Sink! (assist)' : 'SINK!', 'sink');
+      state.phase = 'settle';
+      setTimeout(() => {
+        state.ball = null;
+        setPowerBar(0);
+        endTurnAfterShot(true);
+      }, 650);
+      return;
+    }
+
+    // Clear miss feedback: Rim!, Short, Long, Wide
+    let msg = 'Miss';
+    let kind = 'miss';
+    const farZ = TABLE_LEN - 0.35;
+    const rackZ = nearCup ? nearCup.z : farZ;
+
+    if (nearCup && nearD <= CUP_HIT_R * 1.35) {
+      msg = 'Rim!';
+      kind = 'rim';
+    } else if (Math.abs(b.x) > TABLE_W * 0.55 || (nearCup && Math.abs(b.x - nearCup.x) > CUP_HIT_R * 1.8 && Math.abs(b.z - rackZ) < 0.55)) {
+      msg = 'Wide';
+      kind = 'miss';
+    } else if (b.z < rackZ - 0.45) {
+      msg = 'Short';
+      kind = 'miss';
+    } else if (b.z > rackZ + 0.55 || b.z > TABLE_LEN + 0.2) {
+      msg = 'Long';
+      kind = 'miss';
+    } else {
+      // Default by dominant miss axis
+      if (nearCup && Math.abs(b.x - nearCup.x) > Math.abs(b.z - nearCup.z)) {
+        msg = 'Wide';
+      } else if (b.z < rackZ) {
+        msg = 'Short';
+      } else {
+        msg = 'Long';
+      }
+      kind = 'miss';
+    }
+
+    b.result = msg;
+    setFeedback(msg, kind);
+    state.phase = 'settle';
+    setTimeout(() => {
+      state.ball = null;
+      setPowerBar(0);
+      endTurnAfterShot(false);
+    }, 700);
+  }
+
+  function sinkCup(cup) {
+    cup.alive = true; // ensure
+    cup.alive = false;
+    updateHUD();
   }
 
   function spawnSplash(x, y, z) {
     for (let i = 0; i < 14; i++) {
-      const a = Math.random() * Math.PI * 2;
+      const ang = Math.random() * Math.PI * 2;
       const sp = 0.8 + Math.random() * 2.2;
       state.particles.push({
         x, y, z,
-        vx: Math.cos(a) * sp * 0.4,
-        vy: 1.5 + Math.random() * 3,
-        vz: Math.sin(a) * sp * 0.4,
-        life: 0.5 + Math.random() * 0.4,
-        color: Math.random() > 0.4 ? '#00e5a8' : '#7c5cff'
+        vx: Math.cos(ang) * sp * 0.3,
+        vy: 1.5 + Math.random() * 2.5,
+        vz: Math.sin(ang) * sp * 0.3,
+        life: 0.45 + Math.random() * 0.35,
+        age: 0,
+        col: Math.random() > 0.4 ? '#ffc857' : '#00e5a8'
       });
     }
   }
 
   function updateParticles(dt) {
-    for (const p of state.particles) {
-      p.life -= dt;
+    for (let i = state.particles.length - 1; i >= 0; i--) {
+      const p = state.particles[i];
+      p.age += dt;
       p.vy -= GRAVITY * 0.55 * dt;
       p.x += p.vx * dt;
       p.y += p.vy * dt;
       p.z += p.vz * dt;
+      if (p.age >= p.life || p.y < 0) state.particles.splice(i, 1);
     }
-    state.particles = state.particles.filter(p => p.life > 0 && p.y > -0.2);
   }
 
-  // ——— Drawing ———
+  // ——— Draw ———
   function draw() {
     const W = state.W, H = state.H;
     if (W < 10 || H < 10) return;
     ctx.clearRect(0, 0, W, H);
 
-    // Background vibe
+    // Background ambience
     const bg = ctx.createLinearGradient(0, 0, 0, H);
     bg.addColorStop(0, '#1a0e30');
-    bg.addColorStop(0.45, '#0c0818');
-    bg.addColorStop(1, '#080510');
+    bg.addColorStop(0.45, '#0c0718');
+    bg.addColorStop(1, '#050308');
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
 
     drawTable();
-    drawCupsAndBall();
-    if (state.phase === 'aiming') drawAimPreview();
+    drawCups();
+    drawSwipeGhost();
+    drawBall();
     drawParticles();
-    drawPowerMeter();
   }
 
   function drawTable() {
-    const W = state.W, H = state.H;
-    // Corners of table top (y=0)
     const corners = [
       [-TABLE_W / 2, 0, 0],
       [ TABLE_W / 2, 0, 0],
@@ -992,249 +1192,182 @@
       [-TABLE_W / 2, 0, TABLE_LEN]
     ].map(c => project(c[0], c[1], c[2]));
 
-    // Felt
     ctx.beginPath();
     ctx.moveTo(corners[0].sx, corners[0].sy);
     for (let i = 1; i < 4; i++) ctx.lineTo(corners[i].sx, corners[i].sy);
     ctx.closePath();
-    const felt = ctx.createLinearGradient(0, corners[2].sy, 0, corners[0].sy);
-    felt.addColorStop(0, '#1f7a4a');
-    felt.addColorStop(0.5, '#17633c');
-    felt.addColorStop(1, '#0f3d26');
-    ctx.fillStyle = felt;
+    const wood = ctx.createLinearGradient(0, corners[2].sy, 0, corners[0].sy);
+    wood.addColorStop(0, '#3a2414');
+    wood.addColorStop(0.5, '#5a3a22');
+    wood.addColorStop(1, '#2a180c');
+    ctx.fillStyle = wood;
     ctx.fill();
-
-    // Neon edge
-    ctx.strokeStyle = 'rgba(124, 92, 255, 0.55)';
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
-    ctx.strokeStyle = 'rgba(255, 45, 149, 0.35)';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(255,200,140,0.18)';
+    ctx.lineWidth = 2;
     ctx.stroke();
 
     // Center line
-    const midN = project(0, 0.01, TABLE_LEN * 0.48);
-    const midF = project(0, 0.01, TABLE_LEN * 0.52);
-    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    const c0 = project(0, 0.01, 0.3);
+    const c1 = project(0, 0.01, TABLE_LEN - 0.3);
+    ctx.beginPath();
+    ctx.moveTo(c0.sx, c0.sy);
+    ctx.lineTo(c1.sx, c1.sy);
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
     ctx.lineWidth = 1;
     ctx.setLineDash([6, 8]);
-    ctx.beginPath();
-    ctx.moveTo(project(-TABLE_W * 0.35, 0.01, TABLE_LEN * 0.5).sx, midN.sy);
-    ctx.lineTo(project( TABLE_W * 0.35, 0.01, TABLE_LEN * 0.5).sx, midF.sy);
     ctx.stroke();
     ctx.setLineDash([]);
-
-    // Side rails (simple quads)
-    drawRail(-TABLE_W / 2, -0.08);
-    drawRail( TABLE_W / 2,  0.08);
   }
 
-  function drawRail(xEdge, outward) {
-    const topNear = project(xEdge, 0.06, 0);
-    const topFar  = project(xEdge, 0.06, TABLE_LEN);
-    const botNear = project(xEdge + outward, -0.15, 0);
-    const botFar  = project(xEdge + outward, -0.15, TABLE_LEN);
-    ctx.beginPath();
-    ctx.moveTo(topNear.sx, topNear.sy);
-    ctx.lineTo(topFar.sx, topFar.sy);
-    ctx.lineTo(botFar.sx, botFar.sy);
-    ctx.lineTo(botNear.sx, botNear.sy);
-    ctx.closePath();
-    ctx.fillStyle = 'rgba(40, 24, 70, 0.85)';
-    ctx.fill();
+  function drawCups() {
+    // Draw far (target) then near (own), back-to-front by depth
+    const all = [];
+    const shooter = state.turn;
+    const target = 1 - shooter;
+    living(state.cups[target]).forEach(c => all.push({ cup: c, far: true }));
+    living(state.cups[shooter]).forEach(c => all.push({ cup: c, far: false }));
+    all.sort((a, b) => b.cup.z - a.cup.z);
+
+    for (let i = 0; i < all.length; i++) {
+      drawCup(all[i].cup, all[i].far);
+    }
   }
 
-  function drawCup(cup, isTarget) {
-    if (!cup.alive) return;
+  function drawCup(cup, isFar) {
+    const drawR = CUP_R * (isFar ? cupDrawScale(cup.z) : 1);
     const rimY = CUP_H;
-    const baseY = 0.02;
     const pRim = project(cup.x, rimY, cup.z);
-    const pBase = project(cup.x, baseY, cup.z);
-    const rx = Math.max(4, CUP_R * pRim.scale);
-    const ry = Math.max(2.2, rx * 0.38); // ellipse foreshortening
-    const baseRx = Math.max(3, CUP_R * 0.85 * pBase.scale);
-    const baseRy = Math.max(1.8, baseRx * 0.38);
+    const pBase = project(cup.x, 0, cup.z);
+    const rx = Math.max(4, drawR * pRim.scale);
+    const ry = Math.max(2.5, rx * 0.38);
     const bodyH = Math.max(6, pBase.sy - pRim.sy);
 
-    // Shadow on table
-    const pSh = project(cup.x, 0.01, cup.z);
-    ctx.beginPath();
-    ctx.ellipse(pSh.sx, pSh.sy + 2, rx * 0.95, ry * 0.7, 0, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.fill();
-
-    // Cup body (trapezoid-ish cylinder)
+    // Body
     const grad = ctx.createLinearGradient(pRim.sx - rx, pRim.sy, pRim.sx + rx, pRim.sy);
-    if (isTarget) {
-      grad.addColorStop(0, '#c8d0dc');
-      grad.addColorStop(0.45, '#f2f5fa');
-      grad.addColorStop(1, '#9aa3b0');
+    if (isFar) {
+      grad.addColorStop(0, '#c62828');
+      grad.addColorStop(0.45, '#ef5350');
+      grad.addColorStop(1, '#8e1b1b');
     } else {
-      grad.addColorStop(0, '#6b5b8a');
-      grad.addColorStop(0.45, '#a894c4');
-      grad.addColorStop(1, '#4a3d66');
+      grad.addColorStop(0, '#1565c0');
+      grad.addColorStop(0.45, '#42a5f5');
+      grad.addColorStop(1, '#0d47a1');
     }
+
     ctx.beginPath();
     ctx.moveTo(pRim.sx - rx, pRim.sy);
+    ctx.lineTo(pRim.sx - rx * 0.72, pRim.sy + bodyH);
+    ctx.ellipse(pRim.sx, pRim.sy + bodyH, rx * 0.72, ry * 0.72, 0, 0, Math.PI);
     ctx.lineTo(pRim.sx + rx, pRim.sy);
-    ctx.lineTo(pBase.sx + baseRx, pBase.sy);
-    ctx.lineTo(pBase.sx - baseRx, pBase.sy);
     ctx.closePath();
     ctx.fillStyle = grad;
-    ctx.fill();
-
-    // Base ellipse
-    ctx.beginPath();
-    ctx.ellipse(pBase.sx, pBase.sy, baseRx, baseRy, 0, 0, Math.PI * 2);
-    ctx.fillStyle = isTarget ? '#8a93a0' : '#3d3255';
     ctx.fill();
 
     // Liquid
     ctx.beginPath();
     ctx.ellipse(pRim.sx, pRim.sy + ry * 0.15, rx * 0.78, ry * 0.72, 0, 0, Math.PI * 2);
-    ctx.fillStyle = isTarget ? 'rgba(255, 200, 80, 0.55)' : 'rgba(124, 92, 255, 0.35)';
+    ctx.fillStyle = isFar ? 'rgba(255, 200, 80, 0.55)' : 'rgba(120, 200, 255, 0.45)';
     ctx.fill();
 
-    // Open rim (ellipse outline) — critical for 3D read
+    // Rim
     ctx.beginPath();
     ctx.ellipse(pRim.sx, pRim.sy, rx, ry, 0, 0, Math.PI * 2);
-    ctx.strokeStyle = isTarget ? '#ff4d6d' : '#c77dff';
-    ctx.lineWidth = Math.max(1.5, rx * 0.12);
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = 2;
     ctx.stroke();
+
     ctx.beginPath();
     ctx.ellipse(pRim.sx, pRim.sy, rx * 0.92, ry * 0.92, 0, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
     ctx.lineWidth = 1;
     ctx.stroke();
   }
 
-  function drawBallAt(x, y, z, alpha) {
-    const p = project(x, y, z);
-    const r = Math.max(3, BALL_R * p.scale * (1 + y * 0.15));
-    // Shadow
-    const sh = project(x, 0.01, z);
-    const shR = Math.max(2, BALL_R * sh.scale * (1.1 - Math.min(0.7, y * 0.5)));
-    ctx.globalAlpha = (alpha == null ? 1 : alpha) * 0.4;
-    ctx.beginPath();
-    ctx.ellipse(sh.sx, sh.sy, shR, shR * 0.35, 0, 0, Math.PI * 2);
-    ctx.fillStyle = '#000';
-    ctx.fill();
-    ctx.globalAlpha = alpha == null ? 1 : alpha;
-    // Ball
-    const g = ctx.createRadialGradient(p.sx - r * 0.3, p.sy - r * 0.35, r * 0.1, p.sx, p.sy, r);
-    g.addColorStop(0, '#ffffff');
-    g.addColorStop(0.45, '#ff8cc8');
-    g.addColorStop(1, '#ff2d95');
-    ctx.beginPath();
-    ctx.arc(p.sx, p.sy, r, 0, Math.PI * 2);
-    ctx.fillStyle = g;
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-  }
-
-  function drawCupsAndBall() {
-    const shooter = state.turn;
-    const target = 1 - shooter;
-    // Collect drawables with depth for painter's algorithm
-    const items = [];
-
-    for (const c of state.cups[target]) {
-      if (c.alive) items.push({ kind: 'cup', cup: c, isTarget: true, z: c.z, y: CUP_H });
-    }
-    for (const c of state.cups[shooter]) {
-      if (c.alive) items.push({ kind: 'cup', cup: c, isTarget: false, z: c.z, y: CUP_H });
-    }
-    if (state.ball) {
-      items.push({ kind: 'ball', z: state.ball.z, y: state.ball.y });
-    }
-
-    // Far first (high z), then near; ball interleaved by z, and if similar z draw ball after cups below it
-    items.sort((a, b) => {
-      if (Math.abs(a.z - b.z) > 0.02) return b.z - a.z; // far → near
-      return (a.y || 0) - (b.y || 0);
-    });
-
-    // Trail under ball
-    if (state.ball && state.ball.trail) {
-      const tr = state.ball.trail;
-      for (let i = 0; i < tr.length; i++) {
-        const t = tr[i];
-        drawBallAt(t.x, t.y, t.z, (i + 1) / tr.length * 0.35);
-      }
-    }
-
-    for (const it of items) {
-      if (it.kind === 'cup') drawCup(it.cup, it.isTarget);
-      else if (it.kind === 'ball' && state.ball) {
-        drawBallAt(state.ball.x, state.ball.y, state.ball.z, 1);
-      }
-    }
-  }
-
-  function drawAimPreview() {
-    const a = aimFromDrag();
-    if (a.power < 0.05) return;
-    const pts = sampleTrajectory(a.power, a.yaw, 28);
-    for (let i = 0; i < pts.length; i++) {
-      const t = pts[i];
-      const p = project(t.x, t.y, t.z);
-      const r = Math.max(1.5, 3.5 * (1 - i / pts.length) * (0.6 + a.power * 0.5));
+  function drawSwipeGhost() {
+    // Fading swipe ghost only — NOT a dotted trajectory preview
+    const g = state.swipe.ghost;
+    if (!g || g.length < 2) return;
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (let i = 1; i < g.length; i++) {
+      const a = g[i - 1];
+      const b = g[i];
+      const alpha = Math.min(a.a, b.a) * 0.55;
+      if (alpha < 0.03) continue;
       ctx.beginPath();
-      ctx.arc(p.sx, p.sy, r, 0, Math.PI * 2);
-      ctx.fillStyle = i === pts.length - 1
-        ? 'rgba(0, 229, 168, 0.85)'
-        : 'rgba(255, 200, 87, ' + (0.25 + 0.55 * (1 - i / pts.length)) + ')';
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.strokeStyle = 'rgba(255, 105, 180,' + alpha + ')';
+      ctx.lineWidth = 3 + 4 * alpha;
+      ctx.stroke();
+    }
+    // Tip glow while aiming
+    if (state.swipe.active) {
+      const tip = g[g.length - 1];
+      ctx.beginPath();
+      ctx.arc(tip.x, tip.y, 7, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0, 229, 168, 0.7)';
       ctx.fill();
     }
-
-    // Aim guide from finger
-    ctx.strokeStyle = 'rgba(255, 45, 149, 0.45)';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([4, 6]);
-    ctx.beginPath();
-    ctx.moveTo(state.aim.sx, state.aim.sy);
-    ctx.lineTo(state.aim.cx, state.aim.cy);
-    ctx.stroke();
-    ctx.setLineDash([]);
+    ctx.restore();
   }
 
-  function drawPowerMeter() {
-    if (state.phase !== 'aiming') return;
-    const a = aimFromDrag();
-    const W = state.W, H = state.H;
-    const mw = 14, mh = H * 0.22;
-    const x = W - 28, y = H * 0.55;
-    ctx.fillStyle = 'rgba(0,0,0,0.4)';
-    ctx.fillRect(x, y, mw, mh);
-    const fill = mh * a.power;
-    const g = ctx.createLinearGradient(x, y + mh, x, y);
-    g.addColorStop(0, '#00e5a8');
-    g.addColorStop(0.6, '#ffc857');
-    g.addColorStop(1, '#ff2d95');
-    ctx.fillStyle = g;
-    ctx.fillRect(x, y + mh - fill, mw, fill);
-    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-    ctx.strokeRect(x, y, mw, mh);
+  function drawBall() {
+    let x = 0, y = BALL_R, z = 0.22;
+    if (state.ball && state.ball.alive !== false && state.phase === 'flying') {
+      x = state.ball.x; y = state.ball.y; z = state.ball.z;
+    } else if (state.phase === 'aiming' || state.phase === 'idle') {
+      // Resting ball; nudge slightly with swipe tip for feel (not pull-back)
+      if (state.swipe.active) {
+        const dx = (state.swipe.cx - state.swipe.sx) / Math.max(120, state.W);
+        x = Math.max(-0.25, Math.min(0.25, dx * 0.4));
+      }
+    } else if (state.ball && state.phase === 'settle') {
+      x = state.ball.x; y = Math.max(BALL_R, state.ball.y); z = state.ball.z;
+    } else {
+      return;
+    }
+
+    // Shadow
+    const pShadow = project(x, 0.01, z);
+    const sr = Math.max(3, BALL_R * pShadow.scale * 0.9);
+    ctx.beginPath();
+    ctx.ellipse(pShadow.sx, pShadow.sy, sr, sr * 0.35, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.fill();
+
+    const p = project(x, y, z);
+    const r = Math.max(4, BALL_R * p.scale);
+    const grd = ctx.createRadialGradient(p.sx - r * 0.3, p.sy - r * 0.35, r * 0.1, p.sx, p.sy, r);
+    grd.addColorStop(0, '#ffffff');
+    grd.addColorStop(0.45, '#f0e6ff');
+    grd.addColorStop(1, '#b39ddb');
+    ctx.beginPath();
+    ctx.arc(p.sx, p.sy, r, 0, Math.PI * 2);
+    ctx.fillStyle = grd;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(80,40,120,0.35)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
   }
 
   function drawParticles() {
-    for (const p of state.particles) {
+    for (let i = 0; i < state.particles.length; i++) {
+      const p = state.particles[i];
       const pr = project(p.x, p.y, p.z);
-      const r = Math.max(1.5, 4 * p.life);
-      ctx.globalAlpha = Math.max(0, p.life);
+      const a = 1 - p.age / p.life;
       ctx.beginPath();
-      ctx.arc(pr.sx, pr.sy, r, 0, Math.PI * 2);
-      ctx.fillStyle = p.color;
+      ctx.arc(pr.sx, pr.sy, 2.5 + 2 * a, 0, Math.PI * 2);
+      ctx.fillStyle = p.col;
+      ctx.globalAlpha = a;
       ctx.fill();
       ctx.globalAlpha = 1;
     }
   }
 
   // ——— Loop ———
-  function frame(ts) {
+  function tick(ts) {
     if (!state.lastTs) state.lastTs = ts;
     let dt = (ts - state.lastTs) / 1000;
     state.lastTs = ts;
@@ -1242,18 +1375,26 @@
 
     if (state.feedbackTimer > 0) {
       state.feedbackTimer -= dt;
-      if (state.feedbackTimer <= 0) feedbackEl.textContent = '';
+      if (state.feedbackTimer <= 0) {
+        feedbackEl.textContent = '';
+        feedbackEl.className = '';
+      }
+    }
+
+    // Fade swipe ghost after release
+    if (!state.swipe.active && state.swipe.ghost.length) {
+      for (let i = 0; i < state.swipe.ghost.length; i++) state.swipe.ghost[i].a *= 0.88;
+      state.swipe.ghost = state.swipe.ghost.filter(g => g.a > 0.04);
     }
 
     if (state.phase === 'flying') updateBall(dt);
     updateParticles(dt);
 
     if (gameScreen.classList.contains('active')) draw();
-    requestAnimationFrame(frame);
+    requestAnimationFrame(tick);
   }
-  requestAnimationFrame(frame);
 
-  // ——— Buttons ———
+  // ——— Events ———
   document.getElementById('startBtn').addEventListener('click', startGame);
   document.getElementById('againBtn').addEventListener('click', startGame);
   document.getElementById('homeBtn').addEventListener('click', () => {
@@ -1261,32 +1402,45 @@
     state.phase = 'idle';
   });
   document.getElementById('menuBtn').addEventListener('click', () => {
-    if (state.phase === 'flying') return;
+    if (state.phase === 'flying' || state.phase === 'settle') return;
+    passOverlay.classList.remove('show');
     showScreen(startScreen);
     state.phase = 'idle';
-    passOverlay.classList.remove('show');
   });
   document.getElementById('rerackBtn').addEventListener('click', doRerack);
-  document.getElementById('passReadyBtn').addEventListener('click', dismissPass);
+  document.getElementById('passReadyBtn').addEventListener('click', acceptPass);
 
-  // Resize observers
+  canvas.addEventListener('touchstart', onPointerDown, { passive: false });
+  canvas.addEventListener('touchmove', onPointerMove, { passive: false });
+  canvas.addEventListener('touchend', onPointerUp, { passive: false });
+  canvas.addEventListener('touchcancel', onPointerCancel, { passive: false });
+  canvas.addEventListener('mousedown', onPointerDown);
+  window.addEventListener('mousemove', onPointerMove);
+  window.addEventListener('mouseup', onPointerUp);
+
   window.addEventListener('resize', () => {
     if (gameScreen.classList.contains('active')) resize();
   });
   window.addEventListener('orientationchange', () => {
     setTimeout(() => { if (gameScreen.classList.contains('active')) resize(); }, 200);
   });
+
+  const wrap = document.getElementById('canvasWrap');
   if (typeof ResizeObserver !== 'undefined') {
     const ro = new ResizeObserver(() => {
       if (gameScreen.classList.contains('active')) resize();
     });
-    ro.observe(document.getElementById('canvasWrap'));
+    ro.observe(wrap);
   }
 
-  // Prevent rubber-band scroll on iOS except on menu inputs
-  document.addEventListener('touchmove', (e) => {
-    if (gameScreen.classList.contains('active')) e.preventDefault();
+  // Prevent iOS rubber-band on game screen
+  document.addEventListener('touchmove', function (e) {
+    if (gameScreen.classList.contains('active') && e.target.closest && e.target.closest('#canvasWrap')) {
+      e.preventDefault();
+    }
   }, { passive: false });
+
+  requestAnimationFrame(tick);
 })();
 </script>
 </body>
